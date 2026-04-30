@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest>
+  <control namespace="CockpitPedidos"
+           constructor="CockpitPedidos"
+           version="1.1.21"
+           display-name-key="CockpitPedidos_DisplayName"
+           description-key="CockpitPedidos_Description"
+           control-type="virtual">
+
+    <!--
+      DATASET — nomes dos property-set = nomes lógicos Dataverse (cr660_*).
+      No Canvas: Items = PEDIDOS; Campos → incluir colunas — associação automática por nome.
+    -->
+    <data-set name="pedidos"
+              display-name-key="Pedidos_DisplayName"
+              description-key="Pedidos_Description">
+
+      <!-- ====== Campos = nomes lógicos Dataverse (cr660_...) ====== -->
+      <property-set name="cr660_titulodopedido"
+                    display-name-key="TituloPedido_DisplayName"
+                    description-key="TituloPedido_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_datasolicitacao"
+                    display-name-key="DataSolicitacao_DisplayName"
+                    description-key="DataSolicitacao_Description"
+                    of-type="DateAndTime.DateAndTime"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_marca"
+                    display-name-key="Marca_DisplayName"
+                    description-key="Marca_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_diretoria"
+                    display-name-key="Diretoria_DisplayName"
+                    description-key="Diretoria_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_despesa"
+                    display-name-key="Despesa_DisplayName"
+                    description-key="Despesa_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_quantidade"
+                    display-name-key="Quantidade_DisplayName"
+                    description-key="Quantidade_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_solicitante"
+                    display-name-key="Solicitante_DisplayName"
+                    description-key="Solicitante_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_fornecedor"
+                    display-name-key="Fornecedor_DisplayName"
+                    description-key="Fornecedor_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_cnpj"
+                    display-name-key="CNPJ_DisplayName"
+                    description-key="CNPJ_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_numerodoorcamento"
+                    display-name-key="NumeroOrcamento_DisplayName"
+                    description-key="NumeroOrcamento_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_valor"
+                    display-name-key="Valor_DisplayName"
+                    description-key="Valor_Description"
+                    of-type="Currency"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_responsavel"
+                    display-name-key="Responsavel_DisplayName"
+                    description-key="Responsavel_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_numerodechamado"
+                    display-name-key="NumeroChamado_DisplayName"
+                    description-key="NumeroChamado_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_natureza"
+                    display-name-key="Natureza_DisplayName"
+                    description-key="Natureza_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_numeroderequisicao"
+                    display-name-key="NumeroRequisicao_DisplayName"
+                    description-key="NumeroRequisicao_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_centrodecusto"
+                    display-name-key="CentroCusto_DisplayName"
+                    description-key="CentroCusto_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_contacontabil"
+                    display-name-key="ContaContabil_DisplayName"
+                    description-key="ContaContabil_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_numerodanota"
+                    display-name-key="NumeroNota_DisplayName"
+                    description-key="NumeroNota_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_vencimento"
+                    display-name-key="Vencimento_DisplayName"
+                    description-key="Vencimento_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_ordemdecompra"
+                    display-name-key="OrdemCompra_DisplayName"
+                    description-key="OrdemCompra_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_status"
+                    display-name-key="Status_DisplayName"
+                    description-key="Status_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_setor"
+                    display-name-key="Setor_DisplayName"
+                    description-key="Setor_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+    </data-set>
+
+    <!--
+      =========================================================
+      PROPRIEDADES AUXILIARES (não fazem parte do dataset)
+      =========================================================
+    -->
+
+    <!-- INPUT: mapa de orçamentos por setor.
+         O Canvas App injeta como JSON (ex: '{"TI":50000,"Marketing":30000}').
+         Se vazio, o dashboard mostra "sem orçamento definido". -->
+    <property name="orcamentosJson"
+              display-name-key="OrcamentosJson_DisplayName"
+              description-key="OrcamentosJson_Description"
+              of-type="SingleLine.Text"
+              usage="input"
+              required="false" />
+
+    <!-- INPUT: JSON só das contas (2ª coluna/linha no Canvas). Se vazio, tudo
+         vem de orcamentosJson. Mapa: "código - nome da conta" → R$. -->
+    <property name="orcamentosContasJson"
+              display-name-key="OrcamentosContasJson_DisplayName"
+              description-key="OrcamentosContasJson_Description"
+              of-type="SingleLine.Text"
+              usage="input"
+              required="false" />
+
+    <!-- OUTPUT: JSON completo { setores, contas } (compat. com apps que usam 1 célula). -->
+    <property name="orcamentosJsonOutput"
+              display-name-key="OrcamentosJsonOutput_DisplayName"
+              description-key="OrcamentosJsonOutput_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: só o mapa de contas (2.ª célula/coluna no Dataverse, opcional). -->
+    <property name="orcamentosContasJsonOutput"
+              display-name-key="OrcamentosContasJsonOutput_DisplayName"
+              description-key="OrcamentosContasJsonOutput_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <property name="orcamentosUpdatedTimestamp"
+              display-name-key="OrcamentosUpdatedTimestamp_DisplayName"
+              description-key="OrcamentosUpdatedTimestamp_Description"
+              of-type="Whole.None"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: id do pedido atualmente selecionado (card clicado).
+         Canvas App pode usar para navegação ou highlights. -->
+    <property name="selectedRecordId"
+              display-name-key="SelectedRecordId_DisplayName"
+              description-key="SelectedRecordId_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: JSON do último pedido editado.
+         Shape: { id: string, fields: {...}, at: number }.
+         Canvas App reage via OnChange e faz Patch() na SharePoint List. -->
+    <property name="lastEditedJson"
+              display-name-key="LastEditedJson_DisplayName"
+              description-key="LastEditedJson_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: timestamp epoch ms do último save.
+         Útil para o Canvas detectar mudança mesmo se o JSON for idêntico. -->
+    <property name="lastEditedTimestamp"
+              display-name-key="LastEditedTimestamp_DisplayName"
+              description-key="LastEditedTimestamp_Description"
+              of-type="Whole.None"
+              usage="output"
+              required="false" />
+
+    <!--
+      =========================================================
+      RESOURCES
+      =========================================================
+    -->
+    <resources>
+      <code path="index.ts" order="1"/>
+      <css path="Dashboard.css" order="1" />
+      <css path="PedidoForm.css" order="2" />
+      <resx path="CockpitPedidos.1033.resx" version="1.0.0" />
+      <resx path="CockpitPedidos.1046.resx" version="1.0.0" />
+      <platform-library name="React" version="16.14.0" />
+      <platform-library name="Fluent" version="8.29.0" />
+    </resources>
+
+    <feature-usage>
+      <uses-feature name="Utility" required="true" />
+    </feature-usage>
+
+  </control>
+</manifest>

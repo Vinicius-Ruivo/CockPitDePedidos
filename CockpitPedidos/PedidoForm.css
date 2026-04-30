@@ -1,0 +1,725 @@
+/* =============================================================================
+   Cockpit de Pedidos — formulário (drawer / field control)
+   Modo escuro: gradiente roxo, texto branco, detalhes verde-água (alinhado ao Dashboard).
+   ============================================================================= */
+
+.cp-root {
+  --bg:             #13091e;
+  --bg-elev-1:      rgba(80, 38, 124, 0.35);
+  --bg-elev-2:      rgba(45, 26, 66, 0.85);
+  --bg-elev-3:      rgba(36, 21, 53, 0.92);
+  --border:         rgba(255, 255, 255, 0.1);
+  --border-strong:  rgba(255, 255, 255, 0.16);
+  --divider:        rgba(255, 255, 255, 0.08);
+
+  --text:           #ffffff;
+  --text-muted:     rgba(255, 255, 255, 0.78);
+  --text-dim:       rgba(255, 255, 255, 0.52);
+
+  --focus:          #4dd4b8;
+  --focus-ring:     rgba(60, 179, 157, 0.28);
+  --accent:         #3cb39d;
+
+  --owner-auto:       #c4b5d0;
+  --owner-auto-soft:  rgba(196, 181, 208, 0.12);
+  --owner-luciana:    #e8a4c8;
+  --owner-luciana-soft: rgba(232, 164, 200, 0.12);
+  --owner-luciano:    #7dd3f0;
+  --owner-luciano-soft: rgba(125, 211, 240, 0.12);
+  --owner-shared:     #c8e6a0;
+  --owner-shared-soft: rgba(200, 230, 160, 0.12);
+
+  --status-novo-bg:     rgba(165, 180, 252, 0.15);
+  --status-novo-fg:     #c7d2fe;
+  --status-novo-ring:   rgba(165, 180, 252, 0.35);
+
+  --status-analise-bg:  rgba(251, 191, 36, 0.12);
+  --status-analise-fg:  #fcd34d;
+  --status-analise-ring: rgba(251, 191, 36, 0.28);
+
+  --status-confirmado-bg: rgba(60, 179, 157, 0.18);
+  --status-confirmado-fg: #3cb39d;
+  --status-confirmado-ring: rgba(60, 179, 157, 0.35);
+
+  --value-accent:   #5ed4be;
+
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-lg:  0 12px 32px rgba(0, 0, 0, 0.22);
+  --inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  box-sizing: border-box;
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #4b246a 0%, #2d1a42 42%, var(--bg) 100%);
+  padding: 18px;
+  overflow: auto;
+  line-height: 1.45;
+  font-size: 14px;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.cp-root *,
+.cp-root *::before,
+.cp-root *::after {
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------------------
+   MODO EMBEDDED — quando o formulário roda dentro do drawer do Dashboard.
+   Remove padding externo, background gradient e min-height para encaixar
+   naturalmente no container pai. O header também fica escondido.
+   --------------------------------------------------------------------------- */
+
+.cp-root-embedded {
+  padding: 0;
+  background: transparent;
+  min-height: 0;
+  overflow: visible;
+}
+
+.cp-root-embedded .cp-section:last-of-type {
+  margin-bottom: 8px;
+}
+
+/* Modo claro — quando o Dashboard aplica .cp-dash-root--light no ancestral */
+.cp-dash-root--light .cp-root {
+  --bg:             #f4f4f5;
+  --bg-elev-1:      #ffffff;
+  --bg-elev-2:      #fafafa;
+  --bg-elev-3:      #f4f4f5;
+  --border:         #e4e4e7;
+  --border-strong:  #d4d4d8;
+  --divider:        #e4e4e7;
+
+  --text:           #18181b;
+  --text-muted:     #52525b;
+  --text-dim:       #71717a;
+
+  --focus:          #4f6ae8;
+  --focus-ring:     rgba(79, 106, 232, 0.2);
+  --accent:         #4f6ae8;
+
+  --owner-auto:       #6b7280;
+  --owner-auto-soft:  rgba(107, 114, 128, 0.1);
+  --owner-luciana:    #9d4f7a;
+  --owner-luciana-soft: rgba(157, 79, 122, 0.1);
+  --owner-luciano:    #2f6f9f;
+  --owner-luciano-soft: rgba(47, 111, 159, 0.1);
+  --owner-shared:     #6b7a3d;
+  --owner-shared-soft: rgba(107, 122, 61, 0.1);
+
+  --status-novo-bg:     rgba(37, 99, 235, 0.1);
+  --status-novo-fg:     #2563eb;
+  --status-novo-ring:   rgba(37, 99, 235, 0.25);
+
+  --status-analise-bg:  rgba(180, 83, 9, 0.1);
+  --status-analise-fg:  #b45309;
+  --status-analise-ring: rgba(180, 83, 9, 0.25);
+
+  --status-confirmado-bg: rgba(21, 128, 61, 0.1);
+  --status-confirmado-fg: #15803d;
+  --status-confirmado-ring: rgba(21, 128, 61, 0.25);
+
+  --value-accent:   #1e40af;
+
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg:  0 10px 28px rgba(0, 0, 0, 0.08);
+  --inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  color: var(--text);
+  background: linear-gradient(90deg, #5e238c 0%, #a41b80 100%);
+}
+
+.cp-dash-root--light .cp-root::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+}
+.cp-dash-root--light .cp-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+/* Scrollbar sutil no tema dark */
+.cp-root::-webkit-scrollbar { width: 10px; height: 10px; }
+.cp-root::-webkit-scrollbar-track { background: transparent; }
+.cp-root::-webkit-scrollbar-thumb {
+  background: rgba(100, 70, 130, 0.55);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.cp-root::-webkit-scrollbar-thumb:hover { background: #384264; background-clip: padding-box; }
+
+/* ---------------------------------------------------------------------------
+   HEADER (barra superior: título + mini-métricas do pedido)
+   --------------------------------------------------------------------------- */
+
+.cp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 6px 4px 14px;
+  flex-wrap: wrap;
+}
+
+.cp-header-left { min-width: 0; }
+
+.cp-header-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cp-header-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+.cp-header-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  padding-left: 16px;
+}
+
+.cp-metrics {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.cp-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+}
+
+.cp-metric-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cp-metric-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.cp-metric-value.cp-metric-value-accent {
+  color: var(--value-accent);
+}
+
+/* ---------------------------------------------------------------------------
+   SUMMARY CARD (hero card — estilo "Empresa Alpha" da referência)
+   --------------------------------------------------------------------------- */
+
+.cp-summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 24px;
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--inner-glow);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.cp-summary::before {
+  display: none;
+}
+
+.cp-summary-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  z-index: 1;
+}
+
+.cp-summary-supplier {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
+}
+
+.cp-summary-supplier-placeholder {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.cp-summary-code {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cp-summary-status-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cp-summary-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  z-index: 1;
+}
+
+.cp-summary-value-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cp-summary-value {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--value-accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.cp-summary-icon {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------------------
+   STATUS PILL
+   --------------------------------------------------------------------------- */
+
+.cp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.cp-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.cp-status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 22px 0 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A93AD' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cp-status-select option {
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+.cp-status-select:focus { outline: none; }
+
+/* Variantes por status */
+.cp-status-novo {
+  background: var(--status-novo-bg);
+  border-color: var(--status-novo-ring);
+  color: var(--status-novo-fg);
+}
+.cp-status-novo .cp-status-dot {
+  background: var(--status-novo-fg);
+}
+
+.cp-status-em-análise,
+.cp-status-em-analise {
+  background: var(--status-analise-bg);
+  border-color: var(--status-analise-ring);
+  color: var(--status-analise-fg);
+}
+.cp-status-em-análise .cp-status-dot,
+.cp-status-em-analise .cp-status-dot {
+  background: var(--status-analise-fg);
+}
+
+.cp-status-confirmado {
+  background: var(--status-confirmado-bg);
+  border-color: var(--status-confirmado-ring);
+  color: var(--status-confirmado-fg);
+}
+.cp-status-confirmado .cp-status-dot {
+  background: var(--status-confirmado-fg);
+}
+
+/* ---------------------------------------------------------------------------
+   SECTIONS (cards escuros com borda superior colorida por owner)
+   --------------------------------------------------------------------------- */
+
+.cp-section {
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px 20px;
+  box-shadow: var(--inner-glow);
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cp-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--owner-auto);
+  opacity: 0.85;
+}
+.cp-section-luciana::before { background: var(--owner-luciana); }
+.cp-section-luciano::before { background: var(--owner-luciano); }
+.cp-section-shared::before  { background: var(--owner-shared); }
+
+.cp-section-head {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.cp-section-icon {
+  font-size: 16px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.cp-section-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-left: 38px;
+}
+
+/* ---------------------------------------------------------------------------
+   GRID DE CAMPOS
+   --------------------------------------------------------------------------- */
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   FIELD (card dentro do card; borda lateral indicando owner)
+   --------------------------------------------------------------------------- */
+
+.cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--owner-auto);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.cp-field-auto    { border-left-color: var(--owner-auto);    background: var(--bg-elev-2); }
+.cp-field-luciana { border-left-color: var(--owner-luciana); background: var(--bg-elev-2); }
+.cp-field-luciano { border-left-color: var(--owner-luciano); background: var(--bg-elev-2); }
+.cp-field-shared  { border-left-color: var(--owner-shared);  background: var(--bg-elev-2); }
+
+.cp-field:focus-within {
+  border-color: rgba(91, 124, 250, 0.45);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.cp-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cp-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cp-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------------------
+   BADGES DE RESPONSABILIDADE
+   --------------------------------------------------------------------------- */
+
+.cp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+.cp-badge-emoji { font-size: 11px; }
+
+.cp-badge-auto {
+  background: var(--owner-auto-soft);
+  color: var(--owner-auto);
+  border-color: rgba(138, 147, 173, 0.25);
+}
+
+.cp-badge-luciana {
+  background: var(--owner-luciana-soft);
+  color: var(--owner-luciana);
+  border-color: rgba(184, 122, 158, 0.28);
+}
+
+.cp-badge-luciano {
+  background: var(--owner-luciano-soft);
+  color: var(--owner-luciano);
+  border-color: rgba(90, 155, 196, 0.28);
+}
+
+.cp-badge-shared {
+  background: var(--owner-shared-soft);
+  color: var(--owner-shared);
+  border-color: rgba(143, 158, 107, 0.28);
+}
+
+/* ---------------------------------------------------------------------------
+   INPUTS
+   --------------------------------------------------------------------------- */
+
+.cp-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.cp-input::placeholder {
+  color: var(--text-dim);
+}
+
+.cp-input:hover {
+  border-color: #4b4e56;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cp-input:focus {
+  border-color: rgba(91, 124, 250, 0.5);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+  background: rgba(91, 124, 250, 0.04);
+}
+
+/* Inputs de data / calendar picker — invertemos o ícone para ficar visível no dark */
+.cp-input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.7) brightness(1.2);
+  opacity: 0.8;
+}
+
+.cp-input-currency {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--value-accent);
+  font-weight: 600;
+}
+
+/* Remove setas do number input para ficar mais clean */
+.cp-input[type="number"]::-webkit-outer-spin-button,
+.cp-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.cp-input[type="number"] { -moz-appearance: textfield; }
+
+/* Select nativo — herda estilo de .cp-input e mostra seta discreta */
+select.cp-input,
+.cp-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%239aa0a6' d='M3 4.5l3 3 3-3z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+select.cp-input optgroup {
+  color: var(--text);
+  background: #1d1f24;
+  font-weight: 600;
+}
+select.cp-input option {
+  color: var(--text);
+  background: #1d1f24;
+  font-weight: 400;
+}
+
+/* ---------------------------------------------------------------------------
+   FOOTER / LEGENDA
+   --------------------------------------------------------------------------- */
+
+.cp-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 14px 20px;
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  box-shadow: var(--inner-glow);
+}
+
+.cp-footer-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.cp-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   RESPONSIVIDADE
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  .cp-root { padding: 14px; }
+
+  .cp-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cp-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 18px 20px;
+  }
+  .cp-summary-right {
+    align-items: flex-start;
+    width: 100%;
+  }
+  .cp-summary-value { font-size: 24px; }
+
+  .cp-section {
+    padding: 16px 16px 18px;
+  }
+  .cp-grid {
+    grid-template-columns: 1fr;
+  }
+}

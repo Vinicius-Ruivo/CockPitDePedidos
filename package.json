@@ -1,0 +1,36 @@
+{
+  "name": "cockpit-pedidos-pcf",
+  "version": "1.0.0",
+  "description": "PCF Component - Cockpit de Pedidos de Compra (React + TypeScript) para Power Apps Canvas",
+  "scripts": {
+    "build": "pcf-scripts build",
+    "clean": "pcf-scripts clean",
+    "rebuild": "pcf-scripts rebuild",
+    "start": "pcf-scripts start",
+    "start:watch": "pcf-scripts start watch",
+    "refreshTypes": "pcf-scripts refreshTypes",
+    "lint": "pcf-scripts lint",
+    "lint:fix": "pcf-scripts lint fix",
+    "deploy": "npm run build && node scripts/pcf-push.cjs",
+    "deploy:watch": "nodemon --watch CockpitPedidos --ext ts,tsx,css,xml,resx --delay 2500 --exec npm run deploy"
+  },
+  "dependencies": {
+    "@fluentui/react": "^8.110.7",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/powerapps-component-framework": "^1.3.4",
+    "@types/react": "^16.14.60",
+    "@types/react-dom": "^16.9.24",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.0",
+    "globals": "^17.5.0",
+    "nodemon": "^3.1.9",
+    "pcf-scripts": "^1",
+    "pcf-start": "^1",
+    "typescript": "^4.9.5",
+    "typescript-eslint": "^8.58.2"
+  }
+}

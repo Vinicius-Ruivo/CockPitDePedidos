@@ -1,0 +1,6 @@
+{
+  "featureFlags": {
+    "pcfAllowCustomWebpack": false
+  },
+  "skipBuildLinting": true
+}

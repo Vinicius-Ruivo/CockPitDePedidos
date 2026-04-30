@@ -1,0 +1,46 @@
+# Dependências e artefactos de build
+node_modules/
+out/
+obj/
+bin/
+.vs/
+*.user
+*.suo
+.pcf-build/
+CockpitPedidos/generated/
+*.pcfproj.user
+*.log
+
+# Pacotes / soluções temporárias (deploy PCF)
+*.zip
+**/PowerAppsToolsTemp*/
+
+# Ambiente e segredos — NUNCA versionar
+.env
+.env.*
+!.env.example
+*.pfx
+*.snk
+*.publishsettings
+*.tokens.json
+*.secret
+local.settings.json
+**/appsettings.*.json
+!**/appsettings.json
+
+# Ferramentas / IDE local
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# Testes / cobertura
+coverage/
+.nyc_output/
+TestResults/
+
+# SO
+ehthumbs.db
+Desktop.ini

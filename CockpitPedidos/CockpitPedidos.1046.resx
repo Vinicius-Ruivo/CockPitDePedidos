@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    =============================================================================
+    CockpitPedidos - Português (Brasil) - LCID 1046
+    Todas as chaves de display-name-key / description-key do ControlManifest
+    estão localizadas aqui. Boas práticas:
+      - Preservar a chave EXATAMENTE como declarada no manifest.
+      - xml:space="preserve" para manter acentuação e espaços.
+    =============================================================================
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ============================================================ -->
+  <!-- CONTROL                                                      -->
+  <!-- ============================================================ -->
+  <data name="CockpitPedidos_DisplayName" xml:space="preserve">
+    <value>CockPit - Pedidos de Requisição</value>
+  </data>
+  <data name="CockpitPedidos_Description" xml:space="preserve">
+    <value>Formulário reativo para gestão completa de pedidos de compra. Indica visualmente a responsabilidade (Luciana / Luciano) sem bloquear nenhum campo.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SEÇÃO 1 — AUTOMÁTICOS / FORMS                                -->
+  <!-- ============================================================ -->
+  <data name="TituloPedido_DisplayName" xml:space="preserve">
+    <value>Título do pedido</value>
+  </data>
+  <data name="TituloPedido_Description" xml:space="preserve">
+    <value>Coluna TITULO DO PEDIDO no Dataverse (nome primário). Em geral o mesmo nome do solicitante.</value>
+  </data>
+
+  <data name="DataSolicitacao_DisplayName" xml:space="preserve">
+    <value>Data da solicitação</value>
+  </data>
+  <data name="DataSolicitacao_Description" xml:space="preserve">
+    <value>Coluna DATASOLICITACAO — data e hora em que o pedido foi realizado.</value>
+  </data>
+
+  <data name="Marca_DisplayName" xml:space="preserve">
+    <value>Marca</value>
+  </data>
+  <data name="Marca_Description" xml:space="preserve">
+    <value>Marca relacionada ao pedido.</value>
+  </data>
+
+  <data name="Diretoria_DisplayName" xml:space="preserve">
+    <value>Diretoria</value>
+  </data>
+  <data name="Diretoria_Description" xml:space="preserve">
+    <value>Diretoria solicitante.</value>
+  </data>
+
+  <data name="Despesa_DisplayName" xml:space="preserve">
+    <value>Despesa</value>
+  </data>
+  <data name="Despesa_Description" xml:space="preserve">
+    <value>Tipo ou descrição da despesa.</value>
+  </data>
+
+  <data name="Quantidade_DisplayName" xml:space="preserve">
+    <value>Quantidade</value>
+  </data>
+  <data name="Quantidade_Description" xml:space="preserve">
+    <value>Coluna QUANTIDADE — texto (ex.: número ou lista como 5, 15, 4).</value>
+  </data>
+
+  <data name="Solicitante_DisplayName" xml:space="preserve">
+    <value>Solicitante</value>
+  </data>
+  <data name="Solicitante_Description" xml:space="preserve">
+    <value>Coluna SOLICITANTE no Dataverse — nome de quem fez o pedido.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SEÇÃO 2 — LUCIANA (Tratamento inicial)                       -->
+  <!-- ============================================================ -->
+  <data name="Fornecedor_DisplayName" xml:space="preserve">
+    <value>Fornecedor</value>
+  </data>
+  <data name="Fornecedor_Description" xml:space="preserve">
+    <value>Razão social do fornecedor. Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="CNPJ_DisplayName" xml:space="preserve">
+    <value>CNPJ</value>
+  </data>
+  <data name="CNPJ_Description" xml:space="preserve">
+    <value>CNPJ do fornecedor (00.000.000/0000-00). Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="NumeroOrcamento_DisplayName" xml:space="preserve">
+    <value>Nº Orçamento</value>
+  </data>
+  <data name="NumeroOrcamento_Description" xml:space="preserve">
+    <value>Número do orçamento aprovado. Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="Valor_DisplayName" xml:space="preserve">
+    <value>Valor</value>
+  </data>
+  <data name="Valor_Description" xml:space="preserve">
+    <value>Valor total do pedido (moeda). Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="Responsavel_DisplayName" xml:space="preserve">
+    <value>Responsável</value>
+  </data>
+  <data name="Responsavel_Description" xml:space="preserve">
+    <value>Responsável pela execução da compra. Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="NumeroChamado_DisplayName" xml:space="preserve">
+    <value>Número de Chamado</value>
+  </data>
+  <data name="NumeroChamado_Description" xml:space="preserve">
+    <value>Número do chamado relacionado ao pedido. Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="Natureza_DisplayName" xml:space="preserve">
+    <value>Natureza</value>
+  </data>
+  <data name="Natureza_Description" xml:space="preserve">
+    <value>Natureza da despesa. Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <data name="NumeroRequisicao_DisplayName" xml:space="preserve">
+    <value>Número de Requisição</value>
+  </data>
+  <data name="NumeroRequisicao_Description" xml:space="preserve">
+    <value>Número da requisição interna. Responsabilidade primária: Luciana.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SEÇÃO 3 — LUCIANO (Financeiro / Contábil)                    -->
+  <!-- ============================================================ -->
+  <data name="CentroCusto_DisplayName" xml:space="preserve">
+    <value>Centro de Custo</value>
+  </data>
+  <data name="CentroCusto_Description" xml:space="preserve">
+    <value>Centro de custo contábil do pedido. Responsabilidade primária: Luciano.</value>
+  </data>
+
+  <data name="ContaContabil_DisplayName" xml:space="preserve">
+    <value>Conta Contábil</value>
+  </data>
+  <data name="ContaContabil_Description" xml:space="preserve">
+    <value>Conta contábil vinculada ao pedido. Responsabilidade primária: Luciano.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SEÇÃO 4 — COMPARTILHADOS / CONDICIONAIS                      -->
+  <!-- ============================================================ -->
+  <data name="NumeroNota_DisplayName" xml:space="preserve">
+    <value>Nº Nota</value>
+  </data>
+  <data name="NumeroNota_Description" xml:space="preserve">
+    <value>Número da nota fiscal. Campo compartilhado.</value>
+  </data>
+
+  <data name="Vencimento_DisplayName" xml:space="preserve">
+    <value>Vencimento</value>
+  </data>
+  <data name="Vencimento_Description" xml:space="preserve">
+    <value>Texto livre (ex.: data de vencimento). Campo compartilhado.</value>
+  </data>
+
+  <data name="OrdemCompra_DisplayName" xml:space="preserve">
+    <value>Ordem de Compra</value>
+  </data>
+  <data name="OrdemCompra_Description" xml:space="preserve">
+    <value>Número da ordem de compra emitida. Campo compartilhado.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SEÇÃO 5 — CONTROLE DE FLUXO                                  -->
+  <!-- ============================================================ -->
+  <data name="Status_DisplayName" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Status_Description" xml:space="preserve">
+    <value>Status atual do pedido: Novo, Em Análise ou Confirmado.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SEÇÃO 6 — CATEGORIZAÇÃO LIVRE                                -->
+  <!-- ============================================================ -->
+  <data name="Setor_DisplayName" xml:space="preserve">
+    <value>Setor</value>
+  </data>
+  <data name="Setor_Description" xml:space="preserve">
+    <value>Setor responsável pelo pedido (ex.: TI, Marketing, Operações). Preenchido por Luciana/Luciano — os valores já usados ficam disponíveis como sugestão para próximos pedidos.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- DATASET PRINCIPAL                                            -->
+  <!-- ============================================================ -->
+  <data name="Pedidos_DisplayName" xml:space="preserve">
+    <value>Pedidos</value>
+  </data>
+  <data name="Pedidos_Description" xml:space="preserve">
+    <value>Conjunto de dados (SharePoint List) contendo todos os pedidos de compra vindos do Microsoft Forms via Power Automate.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- PROPRIEDADES AUXILIARES                                      -->
+  <!-- ============================================================ -->
+  <data name="OrcamentosJson_DisplayName" xml:space="preserve">
+    <value>Orçamentos (JSON)</value>
+  </data>
+  <data name="OrcamentosJson_Description" xml:space="preserve">
+    <value>1ª coluna/linha: orç. por setor. Pode ser JSON só com setores, ou o formato antigo num único bloco, ou ainda { "setores":{…} }. Se houver 2 colunas, use a propriedade Orçamentos (contas) para o 2.º ficheiro.</value>
+  </data>
+
+  <data name="OrcamentosContasJson_DisplayName" xml:space="preserve">
+    <value>Orçamentos contas (JSON)</value>
+  </data>
+  <data name="OrcamentosContasJson_Description" xml:space="preserve">
+    <value>2.ª coluna/linha (opc.): orç. por conta contábil, mapa "código - nome" → R$.</value>
+  </data>
+
+  <data name="OrcamentosJsonOutput_DisplayName" xml:space="preserve">
+    <value>Orçamentos (JSON após salvar – completo)</value>
+  </data>
+  <data name="OrcamentosJsonOutput_Description" xml:space="preserve">
+    <value>Quando o usuário salva no resumo, JSON completo com setores e contas. Use o mesmo padrão de hoje: Set/Patch nessa célula.</value>
+  </data>
+  <data name="OrcamentosContasJsonOutput_DisplayName" xml:space="preserve">
+    <value>Orç. só contas (JSON ao salvar)</value>
+  </data>
+  <data name="OrcamentosContasJsonOutput_Description" xml:space="preserve">
+    <value>Mapa só de contas contábeis → R$. Paralelo, para 2.ª célula ou 2.ª coluna, sem fórmula extra; opcional se só usar 1 célula.</value>
+  </data>
+
+  <data name="OrcamentosUpdatedTimestamp_DisplayName" xml:space="preserve">
+    <value>Timestamp do save de orçamentos</value>
+  </data>
+  <data name="OrcamentosUpdatedTimestamp_Description" xml:space="preserve">
+    <value>Timestamp epoch (ms) do último salvamento de orçamentos pela interface. Ajuda o app a detectar mudanças.</value>
+  </data>
+
+  <data name="SelectedRecordId_DisplayName" xml:space="preserve">
+    <value>ID do Pedido Selecionado</value>
+  </data>
+  <data name="SelectedRecordId_Description" xml:space="preserve">
+    <value>ID do registro atualmente selecionado (card clicado). Pode ser usado pelo Canvas App para navegação ou highlights externos.</value>
+  </data>
+
+  <data name="LastEditedJson_DisplayName" xml:space="preserve">
+    <value>Último Pedido Editado (JSON)</value>
+  </data>
+  <data name="LastEditedJson_Description" xml:space="preserve">
+    <value>JSON do último pedido salvo no drawer. Shape: { id, fields, at }. O Canvas App deve reagir via OnChange e chamar Patch() na SharePoint List.</value>
+  </data>
+
+  <data name="LastEditedTimestamp_DisplayName" xml:space="preserve">
+    <value>Timestamp do Último Save</value>
+  </data>
+  <data name="LastEditedTimestamp_Description" xml:space="preserve">
+    <value>Timestamp epoch (ms) do último save. Útil para o Canvas App detectar mudanças mesmo quando o JSON permanece idêntico.</value>
+  </data>
+</root>

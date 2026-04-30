@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    =============================================================================
+    CockpitPedidos - English (United States) - LCID 1033
+    Fallback obrigatório do PCF. Usado quando a cultura do ambiente Power Apps
+    não tiver tradução específica (ou quando alguém fora do pt-BR abrir o Studio).
+    =============================================================================
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- CONTROL -->
+  <data name="CockpitPedidos_DisplayName" xml:space="preserve">
+    <value>CockPit - Requisition requests</value>
+  </data>
+  <data name="CockpitPedidos_Description" xml:space="preserve">
+    <value>Reactive form for end-to-end purchase order management. Visually indicates ownership (Luciana / Luciano) without locking any field.</value>
+  </data>
+
+  <!-- AUTO / FORMS -->
+  <data name="TituloPedido_DisplayName" xml:space="preserve">
+    <value>Order title</value>
+  </data>
+  <data name="TituloPedido_Description" xml:space="preserve">
+    <value>Primary name column (TITULO DO PEDIDO). Usually the requester name.</value>
+  </data>
+
+  <data name="DataSolicitacao_DisplayName" xml:space="preserve">
+    <value>Request date/time</value>
+  </data>
+  <data name="DataSolicitacao_Description" xml:space="preserve">
+    <value>DATASOLICITACAO — when the order was submitted.</value>
+  </data>
+
+  <data name="Marca_DisplayName" xml:space="preserve">
+    <value>Brand</value>
+  </data>
+  <data name="Marca_Description" xml:space="preserve">
+    <value>Brand related to the order.</value>
+  </data>
+
+  <data name="Diretoria_DisplayName" xml:space="preserve">
+    <value>Directorate</value>
+  </data>
+  <data name="Diretoria_Description" xml:space="preserve">
+    <value>Requesting directorate.</value>
+  </data>
+
+  <data name="Despesa_DisplayName" xml:space="preserve">
+    <value>Expense</value>
+  </data>
+  <data name="Despesa_Description" xml:space="preserve">
+    <value>Expense type or description.</value>
+  </data>
+
+  <data name="Quantidade_DisplayName" xml:space="preserve">
+    <value>Quantity</value>
+  </data>
+  <data name="Quantidade_Description" xml:space="preserve">
+    <value>QUANTIDADE as text (e.g. one number or comma-separated values).</value>
+  </data>
+
+  <data name="Solicitante_DisplayName" xml:space="preserve">
+    <value>Requester</value>
+  </data>
+  <data name="Solicitante_Description" xml:space="preserve">
+    <value>Dataverse SOLICITANTE column — requester full name.</value>
+  </data>
+
+  <!-- LUCIANA -->
+  <data name="Fornecedor_DisplayName" xml:space="preserve">
+    <value>Supplier</value>
+  </data>
+  <data name="Fornecedor_Description" xml:space="preserve">
+    <value>Supplier legal name. Primary owner: Luciana.</value>
+  </data>
+
+  <data name="CNPJ_DisplayName" xml:space="preserve">
+    <value>Tax ID (CNPJ)</value>
+  </data>
+  <data name="CNPJ_Description" xml:space="preserve">
+    <value>Supplier tax ID (00.000.000/0000-00). Primary owner: Luciana.</value>
+  </data>
+
+  <data name="NumeroOrcamento_DisplayName" xml:space="preserve">
+    <value>Quote #</value>
+  </data>
+  <data name="NumeroOrcamento_Description" xml:space="preserve">
+    <value>Approved quote number. Primary owner: Luciana.</value>
+  </data>
+
+  <data name="Valor_DisplayName" xml:space="preserve">
+    <value>Amount</value>
+  </data>
+  <data name="Valor_Description" xml:space="preserve">
+    <value>Total order amount (currency). Primary owner: Luciana.</value>
+  </data>
+
+  <data name="Responsavel_DisplayName" xml:space="preserve">
+    <value>Owner</value>
+  </data>
+  <data name="Responsavel_Description" xml:space="preserve">
+    <value>Person responsible for executing the purchase. Primary owner: Luciana.</value>
+  </data>
+
+  <data name="NumeroChamado_DisplayName" xml:space="preserve">
+    <value>Ticket #</value>
+  </data>
+  <data name="NumeroChamado_Description" xml:space="preserve">
+    <value>Related support ticket number. Primary owner: Luciana.</value>
+  </data>
+
+  <data name="Natureza_DisplayName" xml:space="preserve">
+    <value>Nature</value>
+  </data>
+  <data name="Natureza_Description" xml:space="preserve">
+    <value>Nature of the expense. Primary owner: Luciana.</value>
+  </data>
+
+  <data name="NumeroRequisicao_DisplayName" xml:space="preserve">
+    <value>Requisition #</value>
+  </data>
+  <data name="NumeroRequisicao_Description" xml:space="preserve">
+    <value>Internal requisition number. Primary owner: Luciana.</value>
+  </data>
+
+  <!-- LUCIANO -->
+  <data name="CentroCusto_DisplayName" xml:space="preserve">
+    <value>Cost Center</value>
+  </data>
+  <data name="CentroCusto_Description" xml:space="preserve">
+    <value>Accounting cost center. Primary owner: Luciano.</value>
+  </data>
+
+  <data name="ContaContabil_DisplayName" xml:space="preserve">
+    <value>GL Account</value>
+  </data>
+  <data name="ContaContabil_Description" xml:space="preserve">
+    <value>General ledger account. Primary owner: Luciano.</value>
+  </data>
+
+  <!-- SHARED -->
+  <data name="NumeroNota_DisplayName" xml:space="preserve">
+    <value>Invoice #</value>
+  </data>
+  <data name="NumeroNota_Description" xml:space="preserve">
+    <value>Invoice number. Shared field.</value>
+  </data>
+
+  <data name="Vencimento_DisplayName" xml:space="preserve">
+    <value>Due Date</value>
+  </data>
+  <data name="Vencimento_Description" xml:space="preserve">
+    <value>Free text (e.g. due date). Shared field.</value>
+  </data>
+
+  <data name="OrdemCompra_DisplayName" xml:space="preserve">
+    <value>Purchase Order</value>
+  </data>
+  <data name="OrdemCompra_Description" xml:space="preserve">
+    <value>Issued purchase order number. Shared field.</value>
+  </data>
+
+  <!-- STATUS -->
+  <data name="Status_DisplayName" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Status_Description" xml:space="preserve">
+    <value>Current order status: New, Under Review or Confirmed.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 6 — FREE CATEGORIZATION                              -->
+  <!-- ============================================================ -->
+  <data name="Setor_DisplayName" xml:space="preserve">
+    <value>Department</value>
+  </data>
+  <data name="Setor_Description" xml:space="preserve">
+    <value>Department responsible for the purchase order (e.g., IT, Marketing, Operations). Filled by Luciana/Luciano — previously used values become available as autocomplete suggestions for future orders.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- MAIN DATASET                                                 -->
+  <!-- ============================================================ -->
+  <data name="Pedidos_DisplayName" xml:space="preserve">
+    <value>Purchase Orders</value>
+  </data>
+  <data name="Pedidos_Description" xml:space="preserve">
+    <value>Dataset (SharePoint List) containing all purchase orders collected from Microsoft Forms via Power Automate.</value>
+  </data>
+
+  <!-- ============================================================ -->
+  <!-- AUXILIARY PROPERTIES                                         -->
+  <!-- ============================================================ -->
+  <data name="OrcamentosJson_DisplayName" xml:space="preserve">
+    <value>Budgets (JSON)</value>
+  </data>
+  <data name="OrcamentosJson_Description" xml:space="preserve">
+    <value>1st cell/row: budget by department. May be setors-only JSON, a legacy single blob, or { "setores":{…} }. If you use two cells, use the second property for the accounts file.</value>
+  </data>
+  <data name="OrcamentosContasJson_DisplayName" xml:space="preserve">
+    <value>Budget accounts (JSON)</value>
+  </data>
+  <data name="OrcamentosContasJson_Description" xml:space="preserve">
+    <value>2nd cell/row (optional): budget per G/L line, map "code - name" → amount.</value>
+  </data>
+  <data name="OrcamentosJsonOutput_DisplayName" xml:space="preserve">
+    <value>Budgets (full JSON on save)</value>
+  </data>
+  <data name="OrcamentosJsonOutput_Description" xml:space="preserve">
+    <value>Full { setores, contas } on save, same as before. Bind your single cell/variable to this if you do not use the split fields.</value>
+  </data>
+  <data name="OrcamentosContasJsonOutput_DisplayName" xml:space="preserve">
+    <value>Account-only budget (JSON on save)</value>
+  </data>
+  <data name="OrcamentosContasJsonOutput_Description" xml:space="preserve">
+    <value>Only the account → amount map, for a 2nd cell. Optional; ignore if you keep one field.</value>
+  </data>
+
+  <data name="OrcamentosUpdatedTimestamp_DisplayName" xml:space="preserve">
+    <value>Budgets save timestamp</value>
+  </data>
+  <data name="OrcamentosUpdatedTimestamp_Description" xml:space="preserve">
+    <value>Epoch timestamp (ms) when budgets were last saved from the UI. Helps the Canvas App detect updates.</value>
+  </data>
+
+  <data name="SelectedRecordId_DisplayName" xml:space="preserve">
+    <value>Selected Record ID</value>
+  </data>
+  <data name="SelectedRecordId_Description" xml:space="preserve">
+    <value>ID of the currently selected record (clicked card). Can be used by the Canvas App for navigation or external highlights.</value>
+  </data>
+
+  <data name="LastEditedJson_DisplayName" xml:space="preserve">
+    <value>Last Edited Record (JSON)</value>
+  </data>
+  <data name="LastEditedJson_Description" xml:space="preserve">
+    <value>JSON payload of the last record saved in the drawer. Shape: { id, fields, at }. The Canvas App should react via OnChange and call Patch() on the SharePoint List.</value>
+  </data>
+
+  <data name="LastEditedTimestamp_DisplayName" xml:space="preserve">
+    <value>Last Save Timestamp</value>
+  </data>
+  <data name="LastEditedTimestamp_Description" xml:space="preserve">
+    <value>Epoch timestamp (ms) of the last save. Useful for the Canvas App to detect changes even when the JSON remains identical.</value>
+  </data>
+</root>
