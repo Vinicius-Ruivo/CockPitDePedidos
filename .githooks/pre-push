@@ -1,0 +1,15 @@
+#!/bin/sh
+# Antes de git push: publica o PCF no ambiente. Falha do deploy cancela o push.
+# `npm run ship` define SKIP_PRE_PUSH_DEPLOY=1 no push (deploy já correu no script).
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 1
+
+if [ "$SKIP_PRE_PUSH_DEPLOY" = "1" ]; then
+  exit 0
+fi
+
+echo ""
+echo "[pre-push] Executando npm run deploy antes do push..."
+echo ""
+npm run deploy

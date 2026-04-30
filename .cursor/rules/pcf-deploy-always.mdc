@@ -8,11 +8,12 @@ alwaysApply: true
 Sempre que **alterar** ficheiros em `CockpitPedidos/` (ou scripts de deploy do PCF em `scripts/`, `package.json` no deploy):
 
 1. **Incrementar** o `version` em `CockpitPedidos/ControlManifest.Input.xml` no `<control>` quando o código do componente mudar (o Canvas costuma só apanhar builds novas com versão nova).
-2. Na **raiz** do repositório (`ProjetoGestãoDePedidos`), executar **deploy + GitHub**:
+2. Na **raiz** do repositório (`ProjetoGestãoDePedidos`):
+   - **Recomendado (deploy + commit + push):** `npm run ship "mensagem curta do commit em português"`
+   - **Alternativa:** `git add` / `git commit` / `git push` — o gancho **pre-push** (ativado após `npm install`) corre **`npm run deploy`** automaticamente antes do push. Assim o código no GitHub só segue se o deploy ao ambiente tiver sucesso.
+   - **Só Power Apps, sem Git:** `npm run deploy`
 
-   `npm run ship "mensagem curta do commit em português"`
-
-   O comando corre `npm run deploy`, depois `git add -A`, `commit` (se houver alterações) e `git push` para o `origin`. Se o utilizador pedir só deploy sem Git, usar só `npm run deploy`.
+   O `npm run ship` já corre deploy antes do commit; no `push` define-se variável para o pre-push **não** repetir o deploy.
 
 3. Fazer isto **no fim da mesma sessão de alterações**, sem esperar pelo utilizador pedir deploy — exceto se o utilizador disser explicitamente para **não** publicar ou só rever código.
 

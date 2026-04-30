@@ -264,11 +264,17 @@ de pedidos fictícia para simular o dataset.
 
 ## Build & Deploy
 
+**Gancho Git `pre-push` (automático):** após `npm install` na raiz, o repositório
+fica com `core.hooksPath = .githooks`. **Cada `git push` corre `npm run deploy`**
+antes de enviar para o GitHub; se o deploy falhar, o push é cancelado. O fluxo
+`npm run ship` evita deploy duplicado nesse passo. Clonar o repo noutra máquina:
+`git clone` → `npm install` (ativa os hooks).
+
 **Atualizar o componente no Power Apps e subir o código para o GitHub** (após
 subir a versão no `ControlManifest.Input.xml` quando fizer sentido):
 
 ```powershell
-npm run ship "fix: descrição da alteração"
+npm run ship -- "fix: descrição da alteração"
 ```
 
 Isto executa `npm run deploy` e, em seguida, `git add`, `commit` (se houver

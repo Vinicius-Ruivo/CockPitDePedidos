@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "PCF Component - Cockpit de Pedidos de Compra (React + TypeScript) para Power Apps Canvas",
   "scripts": {
+    "prepare": "node scripts/setup-git-hooks.cjs",
     "build": "pcf-scripts build",
     "clean": "pcf-scripts clean",
     "rebuild": "pcf-scripts rebuild",

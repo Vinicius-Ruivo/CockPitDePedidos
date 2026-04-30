@@ -16,11 +16,12 @@ function npmBin() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
-function run(cmd, args, useShell = false) {
+function run(cmd, args, useShell = false, extraEnv = null) {
+  const env = extraEnv ? { ...process.env, ...extraEnv } : process.env;
   const r = spawnSync(cmd, args, {
     stdio: "inherit",
     cwd: root,
-    env: process.env,
+    env,
     shell: useShell,
   });
   if (r.error) {
@@ -55,6 +56,6 @@ if (!st.stdout.trim()) {
   run("git", ["commit", "-m", msg], false);
 }
 
-console.log("\n[ship] 3/3  git push\n");
-run("git", ["push"], false);
+console.log("\n[ship] 3/3  git push (pre-push em silêncio — deploy já feito no passo 1)\n");
+run("git", ["push"], false, { SKIP_PRE_PUSH_DEPLOY: "1" });
 console.log("\n[ship] Concluído.\n");
