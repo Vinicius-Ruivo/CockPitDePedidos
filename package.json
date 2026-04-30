@@ -12,6 +12,7 @@
     "lint": "pcf-scripts lint",
     "lint:fix": "pcf-scripts lint fix",
     "deploy": "npm run build && node scripts/pcf-push.cjs",
+    "ship": "node scripts/ship.cjs",
     "deploy:watch": "nodemon --watch CockpitPedidos --ext ts,tsx,css,xml,resx --delay 2500 --exec npm run deploy"
   },
   "dependencies": {

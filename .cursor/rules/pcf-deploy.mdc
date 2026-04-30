@@ -1,0 +1,22 @@
+---
+description: Após alterar o controle PCF, compilar e publicar com pac pcf push
+globs: CockpitPedidos/**/*
+alwaysApply: false
+---
+
+# Deploy do PCF após mudanças
+
+Quando você **concluir** alterações em `CockpitPedidos/` (`.tsx`, `.ts`, `.css`, manifest, etc.):
+
+0. **Incremente** o `version` em `ControlManifest.Input.xml` (atributo do `<control>`). Sem isso, o Power Apps pode continuar servindo a build antiga.
+
+1. Na raiz do repositório (`ProjetoGestãoDePedidos`), execute no terminal:
+   - **Deploy + GitHub (recomendado):** `npm run ship "fix: o que mudou"`
+   - **Só Power Apps, sem commit:** `npm run deploy`
+   Isto roda `pcf-scripts build` e em seguida `pac pcf push` (via `scripts/pcf-push.cjs`). O `ship` adiciona `git add`, `commit` e `push` para o repositório remoto.
+
+2. Se o deploy falhar (PAC não instalado, não autenticado no ambiente, prefixo do publicador), descreva o erro e o que o usuário precisa ajustar (`PCF_PUBLISHER_PREFIX`, `pac auth`, etc.).
+
+3. Não é necessário rodar `npm run build` separadamente antes do deploy — o script `deploy` já inclui o build.
+
+Para desenvolvimento contínuo local, o usuário pode usar `npm run deploy:watch` (rebuild + push após salvar arquivos).

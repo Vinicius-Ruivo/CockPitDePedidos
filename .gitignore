@@ -34,7 +34,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-.cursor/
+# Cursor: regras do projeto sim; resto local
+.cursor/*
+!.cursor/rules/
 
 # Testes / cobertura
 coverage/

@@ -264,6 +264,17 @@ de pedidos fictícia para simular o dataset.
 
 ## Build & Deploy
 
+**Atualizar o componente no Power Apps e subir o código para o GitHub** (após
+subir a versão no `ControlManifest.Input.xml` quando fizer sentido):
+
+```powershell
+npm run ship "fix: descrição da alteração"
+```
+
+Isto executa `npm run deploy` e, em seguida, `git add`, `commit` (se houver
+ficheiros alterados) e `push` para o repositório remoto. Sem mensagem, o
+script gera um commit com data/hora.
+
 ```powershell
 # Build de produção (gera /out)
 npm run build

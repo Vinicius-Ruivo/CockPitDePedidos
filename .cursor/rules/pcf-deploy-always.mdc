@@ -1,0 +1,19 @@
+---
+description: Após qualquer alteração no PCF, fazer build+deploy (pac push)
+alwaysApply: true
+---
+
+# Deploy obrigatório após modificar o PCF
+
+Sempre que **alterar** ficheiros em `CockpitPedidos/` (ou scripts de deploy do PCF em `scripts/`, `package.json` no deploy):
+
+1. **Incrementar** o `version` em `CockpitPedidos/ControlManifest.Input.xml` no `<control>` quando o código do componente mudar (o Canvas costuma só apanhar builds novas com versão nova).
+2. Na **raiz** do repositório (`ProjetoGestãoDePedidos`), executar **deploy + GitHub**:
+
+   `npm run ship "mensagem curta do commit em português"`
+
+   O comando corre `npm run deploy`, depois `git add -A`, `commit` (se houver alterações) e `git push` para o `origin`. Se o utilizador pedir só deploy sem Git, usar só `npm run deploy`.
+
+3. Fazer isto **no fim da mesma sessão de alterações**, sem esperar pelo utilizador pedir deploy — exceto se o utilizador disser explicitamente para **não** publicar ou só rever código.
+
+Para desenvolvimento contínuo local (opcional): `npm run deploy:watch`.
