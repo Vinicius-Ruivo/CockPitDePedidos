@@ -406,13 +406,13 @@ export function agregarPorMes(
     .sort((a, b) => a.mesISO.localeCompare(b.mesISO));
 }
 
-/** Contagem de pedidos por responsável (Luciana / Luciano / Outros). */
-export function agregarPorResponsavel(
+/** Contagem e valor total por fornecedor. */
+export function agregarPorFornecedor(
   pedidos: IPedido[],
-): Array<{ responsavel: string; quantidade: number; valorTotal: number }> {
+): Array<{ fornecedor: string; quantidade: number; valorTotal: number }> {
   const grupos = new Map<string, { qtd: number; valor: number }>();
   pedidos.forEach((p) => {
-    const key = p.responsavel?.trim() || "Não atribuído";
+    const key = p.fornecedor?.trim() || "Sem fornecedor";
     if (!grupos.has(key)) grupos.set(key, { qtd: 0, valor: 0 });
     const g = grupos.get(key)!;
     g.qtd += 1;
@@ -420,24 +420,12 @@ export function agregarPorResponsavel(
   });
 
   return Array.from(grupos.entries())
-    .map(([responsavel, v]) => ({
-      responsavel,
+    .map(([fornecedor, v]) => ({
+      fornecedor,
       quantidade: v.qtd,
       valorTotal: v.valor,
     }))
-    .sort((a, b) => b.quantidade - a.quantidade);
-}
-
-/** Top N pedidos com maior `valor` — usado no gráfico "Top 10 pedidos".
- *  Pedidos sem valor (ou ≤ 0) são descartados. */
-export function agregarTopPedidos(
-  pedidos: IPedido[],
-  limit: number = 10,
-): IPedido[] {
-  return [...pedidos]
-    .filter((p) => Number.isFinite(p.valor) && (p.valor ?? 0) > 0)
-    .sort((a, b) => (b.valor ?? 0) - (a.valor ?? 0))
-    .slice(0, Math.max(1, limit));
+    .sort((a, b) => b.valorTotal - a.valorTotal);
 }
 
 /** Snapshot completo da projeção orçamentária — alimenta os KPIs de cabeçalho dos gráficos. */

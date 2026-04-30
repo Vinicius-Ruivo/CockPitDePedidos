@@ -2,10 +2,9 @@ import * as React from "react";
 import { ChartMetric, IOrcamentosPayload, IPedido, ISetorAggregate, OrcamentosMap } from "../types";
 import {
   agregarPorContaContabil,
+  agregarPorFornecedor,
   agregarPorMes,
-  agregarPorResponsavel,
   agregarPorStatus,
-  agregarTopPedidos,
   totaisProjecao,
 } from "../utils/metrics";
 import { findSetorBySubcategoria, getSubcategoriasParaSetor, setorLabelExibicao } from "../constants/setoresOrganizacao";
@@ -27,31 +26,31 @@ interface IMetricOption {
 const METRICS: ReadonlyArray<IMetricOption> = [
   {
     id: "orcamento-vs-realizado",
-    label: "Orçado × Realizado × Saldo",
+    label: "Aglutinador Real",
     description: "Por setor — só Confirmados consomem orçamento.",
     icon: "📊",
   },
   {
     id: "orcamento-vs-projetado",
-    label: "Orçado × Realizado × Saldo Projetado",
-    description: "Inclui Em Análise + Novo — projeção do impacto se tudo for aprovado.",
+    label: "Aglutinador Projetado",
+    description: "Inclui Em Análise + Novo — projeção se tudo for aprovado.",
     icon: "🧭",
   },
   {
     id: "orcamento-vs-realizado-contas",
-    label: "Contas: Orçado × Realizado × Saldo",
-    description: "Por conta contábil — só Confirmados consomem o orçamento da conta (mapa orçamentos.contas).",
+    label: "Contas Real",
+    description: "Por conta contábil — só Confirmados (mapa orçamentos.contas).",
     icon: "📒",
   },
   {
     id: "orcamento-vs-projetado-contas",
-    label: "Contas: Orçado × Projetado",
-    description: "Por conta contábil — projeção se pedidos pendentes forem aprovados.",
+    label: "Contas Projetado",
+    description: "Por conta contábil — projeção com pedidos pendentes.",
     icon: "🧾",
   },
   {
     id: "qtd-por-status",
-    label: "Pedidos por Status",
+    label: "Por Status",
     description: "Distribuição: Novo / Em Análise / Confirmado.",
     icon: "🏷️",
   },
@@ -62,16 +61,10 @@ const METRICS: ReadonlyArray<IMetricOption> = [
     icon: "📈",
   },
   {
-    id: "qtd-por-responsavel",
-    label: "Por Responsável",
-    description: "Carga de pedidos por aprovador.",
-    icon: "👥",
-  },
-  {
-    id: "top-pedidos",
-    label: "Top 10 Pedidos",
-    description: "Maiores pedidos — onde o orçamento mais pesa.",
-    icon: "🏆",
+    id: "qtd-por-fornecedor",
+    label: "Por fornecedor",
+    description: "Soma de valor e quantidade de pedidos por fornecedor.",
+    icon: "🏪",
   },
 ];
 
@@ -1081,28 +1074,28 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 };
 
 // =============================================================================
-// Subgráfico 5: Por Responsável — barras horizontais ordenadas
+// Subgráfico: Por fornecedor — barras horizontais (largura ∝ valor total)
 // =============================================================================
 
-const ResponsavelHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
+const FornecedorHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
   pedidos,
 }) => {
   const dados = React.useMemo(
-    () => agregarPorResponsavel(pedidos as IPedido[]),
+    () => agregarPorFornecedor(pedidos as IPedido[]),
     [pedidos],
   );
   if (dados.length === 0) return <EmptyChart label="Sem pedidos." />;
 
-  const maxQtd = Math.max(...dados.map((d) => d.quantidade), 1);
+  const maxValor = Math.max(...dados.map((d) => d.valorTotal), 1);
 
   return (
     <div className="cp-chart-hbars">
       {dados.map((d) => {
-        const pct = (d.quantidade / maxQtd) * 100;
+        const pct = (d.valorTotal / maxValor) * 100;
         return (
-          <div key={d.responsavel} className="cp-chart-hbar-row">
-            <div className="cp-chart-hbar-label" title={d.responsavel}>
-              {d.responsavel}
+          <div key={d.fornecedor} className="cp-chart-hbar-row">
+            <div className="cp-chart-hbar-label" title={d.fornecedor}>
+              {d.fornecedor}
             </div>
             <div className="cp-chart-hbar-track">
               <div
@@ -1110,70 +1103,8 @@ const ResponsavelHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
                 style={{ width: `${pct}%`, background: COLORS.accent }}
               />
               <span className="cp-chart-hbar-text">
-                {d.quantidade} pedido{d.quantidade === 1 ? "" : "s"} ·{" "}
-                {formatCurrencyCompact(d.valorTotal)}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// =============================================================================
-// Subgráfico 6: Top 10 Pedidos — barras horizontais com detalhe
-// =============================================================================
-
-const STATUS_LABEL: Record<string, string> = {
-  novo: "Novo",
-  "em análise": "Em Análise",
-  "em analise": "Em Análise",
-  confirmado: "Confirmado",
-  cancelado: "Cancelado",
-};
-
-const TopPedidosHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
-  pedidos,
-}) => {
-  const dados = React.useMemo(
-    () => agregarTopPedidos(pedidos as IPedido[], 10),
-    [pedidos],
-  );
-  if (dados.length === 0)
-    return <EmptyChart label="Nenhum pedido com valor cadastrado ainda." />;
-
-  const maxValor = Math.max(...dados.map((d) => d.valor ?? 0), 1);
-
-  return (
-    <div className="cp-chart-hbars">
-      {dados.map((p, i) => {
-        const pct = ((p.valor ?? 0) / maxValor) * 100;
-        const stKey = (p.status ?? "").toLowerCase();
-        const cor = STATUS_COLORS[stKey] ?? COLORS.accent;
-        const setorLinha = p.setor
-          ? setorLabelExibicao(p.setor)
-          : "Sem setor";
-        return (
-          <div key={p.id} className="cp-chart-hbar-row cp-chart-hbar-row--top">
-            <div className="cp-chart-hbar-rank" aria-hidden="true">
-              #{i + 1}
-            </div>
-            <div className="cp-chart-hbar-label cp-chart-hbar-label--multiline">
-              <span className="cp-chart-hbar-title" title={p.fornecedor || "Sem fornecedor"}>
-                {p.fornecedor || "—"}
-              </span>
-              <span className="cp-chart-hbar-sublabel" title={setorLinha}>
-                {setorLinha} · {STATUS_LABEL[stKey] ?? p.status ?? "—"}
-              </span>
-            </div>
-            <div className="cp-chart-hbar-track">
-              <div
-                className="cp-chart-hbar-fill"
-                style={{ width: `${pct}%`, background: cor }}
-              />
-              <span className="cp-chart-hbar-text">
-                {formatBRL(p.valor ?? 0)}
+                {formatBRL(d.valorTotal)} · {d.quantidade} pedido
+                {d.quantidade === 1 ? "" : "s"}
               </span>
             </div>
           </div>
@@ -1354,10 +1285,9 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
         )}
         {metric === "qtd-por-status" && <StatusBarsSvg pedidos={pedidosVisiveis} />}
         {metric === "evolucao-mensal" && <EvolucaoSvg pedidos={pedidosVisiveis} />}
-        {metric === "qtd-por-responsavel" && (
-          <ResponsavelHBars pedidos={pedidosVisiveis} />
+        {metric === "qtd-por-fornecedor" && (
+          <FornecedorHBars pedidos={pedidosVisiveis} />
         )}
-        {metric === "top-pedidos" && <TopPedidosHBars pedidos={pedidosVisiveis} />}
       </div>
     </div>
   );

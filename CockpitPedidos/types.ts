@@ -159,8 +159,7 @@ export type ChartMetric =
   | "orcamento-vs-projetado-contas"
   | "qtd-por-status"
   | "evolucao-mensal"
-  | "qtd-por-responsavel"
-  | "top-pedidos";
+  | "qtd-por-fornecedor";
 
 /** Agregação por setor (linha do "Resumo de orçamento por setor"). */
 export interface ISetorAggregate {
