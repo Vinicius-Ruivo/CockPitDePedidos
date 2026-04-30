@@ -268,7 +268,7 @@ de pedidos fictícia para simular o dataset.
 fica com `core.hooksPath = .githooks`. **Cada `git push` corre `npm run deploy`**
 antes de enviar para o GitHub; se o deploy falhar, o push é cancelado. O fluxo
 `npm run ship` evita deploy duplicado nesse passo. Clonar o repo noutra máquina:
-`git clone` → `npm install` (ativa os hooks).
+`git clone` → `npm install` (ativa os hooks). **Exceção (raro):** em bash `SKIP_PRE_PUSH_DEPLOY=1 git push`; em PowerShell `$env:SKIP_PRE_PUSH_DEPLOY='1'; git push` — pula o deploy no hook; usar só em emergência.
 
 **Atualizar o componente no Power Apps e subir o código para o GitHub** (após
 subir a versão no `ControlManifest.Input.xml` quando fizer sentido):
