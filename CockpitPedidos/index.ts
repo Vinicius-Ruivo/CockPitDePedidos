@@ -3,11 +3,14 @@ import * as React from "react";
 import { Dashboard, IDashboardProps } from "./components/Dashboard";
 import {
   DATAVERSE_TO_IPEDIDO,
+  emptyHistoricoOrcamentos,
   emptyOrcamentosPayload,
+  IHistoricoOrcamentos,
   IOrcamentosPayload,
   IPedido,
   IPedidoData,
   IEditedPayload,
+  MesISO,
   PEDIDO_COLUMNS,
 } from "./types";
 import {
@@ -16,8 +19,14 @@ import {
 } from "./constants/setoresOrganizacao";
 import {
   buildOrcamentosFromInputs,
+  garantirSlotDoMes,
+  mesISOAtual,
+  orcamentosDoMes,
+  parseHistoricoOrcamentos,
+  serializeHistoricoOrcamentos,
   serializeNumberMap,
   serializeOrcamentosPayload,
+  setSlotDoMes,
 } from "./utils/metrics";
 
 /**
@@ -37,6 +46,18 @@ import {
  * Orçamentos (resumo): Editar na UI → «Salvar orçamentos» emite `orcamentosJsonOutput`,
  * `orcamentosContasJsonOutput` e `orcamentosUpdatedTimestamp`. No OnChange do controlo,
  * atualize as variáveis ligadas a `orcamentosJson` / `orcamentosContasJson` (Set/Patch).
+ *
+ * Histórico mensal: o controlo mantém um `IHistoricoOrcamentos` (mapa
+ * `YYYY-MM` → payload) recebido por `historicoOrcamentoJson` (input). Em todo
+ * `updateView` o mês corrente do dispositivo é resolvido (`mesISOAtual()`) e,
+ * se não houver slot para ele, é criado automaticamente vazio (decisão de
+ * produto: cada novo mês começa do zero). O slot do mês corrente passa a ser
+ * a fonte de verdade para os gráficos/UI; meses anteriores ficam congelados
+ * no histórico para análise futura. Sempre que o slot do mês muda, o controlo
+ * emite `mesAtualCompetencia`, `mesAtualPayloadJson`,
+ * `historicoOrcamentoJsonOutput` e `historicoUpdatedTimestamp` — o Canvas
+ * deve fazer Patch numa tabela Dataverse `cr660_orcamentohistorico`
+ * (uma linha por competência) para persistir.
  *
  * Nenhum `webAPI.updateRecord` é chamado aqui de propósito: Canvas Apps
  * gerenciam persistência pelo próprio formulário de dados, o que preserva
@@ -67,6 +88,26 @@ export class CockpitPedidos
 
   private lastOrcamentosSaved?: { json: string; at: number; contasOut: string };
 
+  // ---------------------------------------------------------------------------
+  // Histórico mensal
+  // ---------------------------------------------------------------------------
+
+  /** Mapa { "YYYY-MM": IOrcamentosPayload } — fonte de verdade do orçamento mês a mês. */
+  private historico: IHistoricoOrcamentos = emptyHistoricoOrcamentos();
+
+  /** Mês corrente (recalculado a cada updateView). */
+  private mesAtual: MesISO = mesISOAtual();
+
+  /**
+   * Última versão do histórico emitida (canônica). Usada para:
+   *   1) detectar mudanças reais e disparar `historicoUpdatedTimestamp`,
+   *   2) evitar que o eco do Canvas (input antigo a chegar tarde) sobrescreva
+   *      o cache otimista logo após salvar, e
+   *   3) servir como output estável em `getOutputs()` mesmo quando o Canvas
+   *      ainda não devolveu o valor recém-salvo.
+   */
+  private lastHistoricoEmitted?: { json: string; at: number; mes: MesISO; payloadDoMes: string };
+
   public init(
     context: ComponentFramework.Context<IInputs>,
     notifyOutputChanged: () => void,
@@ -87,54 +128,41 @@ export class CockpitPedidos
     const loading = dataset.loading;
     const pedidos = loading ? [] : this.mapDatasetToPedidos(dataset);
 
-    const raw = context.parameters.orcamentosJson.raw ?? "";
-    const rawContas = context.parameters.orcamentosContasJson?.raw ?? "";
+    // 1) Resolver mês corrente (recalculado a cada render → a virada do mês
+    //    é detectada na próxima abertura/refresh do dashboard).
+    this.mesAtual = mesISOAtual();
 
-    const inputSignature = `${raw}\n${rawContas}`;
+    // 2) Sincronizar `historico` com o input vindo do Canvas (Dataverse).
+    //    O input pode estar vazio numa primeira instalação — nesse caso
+    //    seguimos o legado (orcamentosJson + orcamentosContasJson) como
+    //    seed do mês corrente.
+    const rawHistorico = context.parameters.historicoOrcamentoJson?.raw ?? "";
+    const rawLegacyMain = context.parameters.orcamentosJson.raw ?? "";
+    const rawLegacyContas = context.parameters.orcamentosContasJson?.raw ?? "";
+    const inputSignature = `${rawHistorico}\n${rawLegacyMain}\n${rawLegacyContas}`;
 
     if (inputSignature !== this.cachedInputSignature) {
-      const parsed = buildOrcamentosFromInputs(raw, rawContas);
-      const incomingEmpty =
-        Object.keys(parsed.setores).length === 0 &&
-        Object.keys(parsed.contas).length === 0;
-      const cacheHasBudgets =
-        Object.keys(this.cachedOrcamentos.setores).length > 0 ||
-        Object.keys(this.cachedOrcamentos.contas).length > 0;
-      const savedAt = this.lastOrcamentosSaved?.at ?? 0;
-      const withinGraceMs = 8000;
-      const staleEmptyHost =
-        incomingEmpty &&
-        cacheHasBudgets &&
-        Date.now() - savedAt < withinGraceMs &&
-        (this.lastInputSignatureAfterSave == null ||
-          inputSignature !== this.lastInputSignatureAfterSave);
-
-      // O Canvas costuma reenviar o JSON *antigo* logo após o save, antes do
-      // Set/Patch atualizar a variável — isso sobrescrevia o cache otimista e
-      // o número na tela "não mudava" na hora.
-      const incomingCanon = serializeOrcamentosPayload(parsed);
-      const lastJson = this.lastOrcamentosSaved?.json;
-      const staleDivergentHost =
-        lastJson &&
-        Date.now() - savedAt < withinGraceMs &&
-        incomingCanon !== lastJson;
-
-      if (!staleEmptyHost && !staleDivergentHost) {
-        this.cachedOrcamentos = {
-          setores: { ...parsed.setores },
-          contas: {
-            ...this.cachedOrcamentos.contas,
-            ...parsed.contas,
-          },
-        };
-        this.cachedInputSignature = inputSignature;
-      }
+      this.absorverInputs({ rawHistorico, rawLegacyMain, rawLegacyContas });
+      this.cachedInputSignature = inputSignature;
     }
-    const orcamentos = this.cachedOrcamentos;
+
+    // 3) Garantir que o slot do mês corrente existe — vira-de-mês automática.
+    //    Quando `criou=true`, marcamos para emissão (Canvas → Patch novo
+    //    registo na tabela cr660_orcamentohistorico).
+    const ensured = garantirSlotDoMes(this.historico, this.mesAtual);
+    if (ensured.criou) {
+      this.historico = ensured.historico;
+      this.markHistoricoChanged({ persistir: true });
+    }
+
+    // 4) `cachedOrcamentos` (consumido pelo Dashboard) sempre reflete o slot
+    //    do mês corrente — gráficos e KPIs do "topo" passam a ser do mês.
+    this.cachedOrcamentos = orcamentosDoMes(this.historico, this.mesAtual);
 
     const props: IDashboardProps = {
       pedidos,
-      orcamentos,
+      orcamentos: this.cachedOrcamentos,
+      historicoOrcamentos: this.historico,
       loading,
       selectedRecordId: this.selectedRecordId,
       width: context.mode.allocatedWidth,
@@ -147,6 +175,81 @@ export class CockpitPedidos
     };
 
     return React.createElement(Dashboard, props);
+  }
+
+  /**
+   * Lê os 3 inputs e decide o que vira "histórico em memória":
+   *   - Se há `historicoOrcamentoJson` com pelo menos uma chave válida → essa
+   *     é a fonte de verdade. Os legados são ignorados (o Canvas já fez a
+   *     migração ou a tabela já existe).
+   *   - Caso contrário (primeira instalação / Canvas ainda não wireou o novo
+   *     input) → tratamos os legados como o orçamento do mês corrente,
+   *     preservando o comportamento histórico do controlo.
+   * Implementa anti-stale para o eco do Canvas logo após "Salvar".
+   */
+  private absorverInputs(args: {
+    rawHistorico: string;
+    rawLegacyMain: string;
+    rawLegacyContas: string;
+  }): void {
+    const parsedHistorico = parseHistoricoOrcamentos(args.rawHistorico);
+    const historicoTemDados = Object.keys(parsedHistorico).length > 0;
+
+    const cacheTemDados = Object.keys(this.historico).length > 0;
+    const lastEmitted = this.lastHistoricoEmitted;
+    const withinGraceMs = 8000;
+    const dentroDoGrace =
+      lastEmitted && Date.now() - lastEmitted.at < withinGraceMs;
+
+    if (historicoTemDados) {
+      const incomingCanon = serializeHistoricoOrcamentos(parsedHistorico);
+      const staleDivergente =
+        dentroDoGrace && lastEmitted!.json !== incomingCanon;
+      if (!staleDivergente) {
+        this.historico = parsedHistorico;
+      }
+      return;
+    }
+
+    // Sem histórico nos inputs: pode ser primeira execução OU Canvas a enviar
+    // vazio temporário durante o eco. Se o cache tem dados E estamos na janela
+    // de grace pós-save, mantemos. Caso contrário, fazemos seed pelo legado.
+    if (cacheTemDados && dentroDoGrace) return;
+
+    const seed = buildOrcamentosFromInputs(
+      args.rawLegacyMain,
+      args.rawLegacyContas,
+    );
+    const seedTemDados =
+      Object.keys(seed.setores).length > 0 || Object.keys(seed.contas).length > 0;
+    if (seedTemDados) {
+      this.historico = { [this.mesAtual]: seed };
+      return;
+    }
+
+    if (!cacheTemDados) {
+      this.historico = {};
+    }
+  }
+
+  /**
+   * Marca o histórico como modificado: atualiza o cache canônico e, se
+   * `persistir`, agenda emissão para o Canvas via `notifyOutputChanged`.
+   */
+  private markHistoricoChanged(opts: { persistir: boolean }): void {
+    const json = serializeHistoricoOrcamentos(this.historico);
+    const payloadDoMes = serializeOrcamentosPayload(
+      orcamentosDoMes(this.historico, this.mesAtual),
+    );
+    this.lastHistoricoEmitted = {
+      json,
+      at: Date.now(),
+      mes: this.mesAtual,
+      payloadDoMes,
+    };
+    if (opts.persistir) {
+      this.notifyOutputChanged();
+    }
   }
 
   public getOutputs(): IOutputs {
@@ -169,6 +272,16 @@ export class CockpitPedidos
       this.lastOrcamentosSaved?.contasOut ??
       (Object.keys(c.contas).length > 0 ? serializeNumberMap(c.contas) : undefined);
 
+    // Outputs do histórico mensal: sempre eco do cache canônico para que o
+    // Canvas, em qualquer reload, encontre valores estáveis. O timestamp,
+    // contudo, só muda quando há mudança real (save manual ou virada do mês).
+    const histJson = this.lastHistoricoEmitted?.json
+      ?? (Object.keys(this.historico).length > 0
+        ? serializeHistoricoOrcamentos(this.historico)
+        : undefined);
+    const mesPayload = this.lastHistoricoEmitted?.payloadDoMes
+      ?? serializeOrcamentosPayload(c);
+
     return {
       selectedRecordId: this.selectedRecordId,
       lastEditedJson: this.lastEdited ? JSON.stringify(this.lastEdited) : undefined,
@@ -176,6 +289,10 @@ export class CockpitPedidos
       orcamentosJsonOutput: outFull,
       orcamentosContasJsonOutput: outContas,
       orcamentosUpdatedTimestamp: this.lastOrcamentosSaved?.at,
+      historicoOrcamentoJsonOutput: histJson,
+      mesAtualCompetencia: this.mesAtual,
+      mesAtualPayloadJson: mesPayload,
+      historicoUpdatedTimestamp: this.lastHistoricoEmitted?.at,
     };
   }
 
@@ -184,8 +301,10 @@ export class CockpitPedidos
     this.lastOrcamentosSaved = undefined;
     this.lastInputSignatureAfterSave = undefined;
     this.cachedInputSignature = undefined;
+    this.lastHistoricoEmitted = undefined;
     this.selectedRecordId = undefined;
     this.cachedOrcamentos = emptyOrcamentosPayload();
+    this.historico = emptyHistoricoOrcamentos();
   }
 
   // ---------------------------------------------------------------------------
@@ -212,6 +331,7 @@ export class CockpitPedidos
   /**
    * Saída 1 = JSON completo (igual a antes) para uma coluna / variável.
    * Saída 2 = só contas, para 2.ª célula ou tabela, sem tocar a fórmula que já existia.
+   * Saída 3 = histórico mensal (novo) — atualiza o slot do mês corrente.
    */
   private handleSaveOrcamentos = (payload: IOrcamentosPayload): void => {
     const next: IOrcamentosPayload = {
@@ -220,10 +340,19 @@ export class CockpitPedidos
     };
     const json = serializeOrcamentosPayload(next);
     const contasOut = serializeNumberMap(next.contas);
-    this.lastInputSignatureAfterSave = `${json}\n${contasOut}`;
-    this.lastOrcamentosSaved = { json, at: Date.now(), contasOut };
+
+    // Atualiza o slot do mês corrente no histórico (cria se não existir).
+    this.historico = setSlotDoMes(this.historico, this.mesAtual, next);
     this.cachedOrcamentos = next;
-    this.cachedInputSignature = this.lastInputSignatureAfterSave;
+
+    this.lastOrcamentosSaved = { json, at: Date.now(), contasOut };
+    // Ainda mantemos a assinatura para retrocompat. Após este save, o Canvas
+    // re-emite `historicoOrcamentoJson` com a nova versão; o anti-stale em
+    // `absorverInputs` impede que o eco antigo apague o cache otimista.
+    this.lastInputSignatureAfterSave = `${json}\n${contasOut}`;
+    this.cachedInputSignature = undefined; // força reabsorver no próximo updateView
+
+    this.markHistoricoChanged({ persistir: false });
     this.notifyOutputChanged();
   };
 

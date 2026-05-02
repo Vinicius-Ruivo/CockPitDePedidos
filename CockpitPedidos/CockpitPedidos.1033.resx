@@ -281,6 +281,41 @@
     <value>Epoch timestamp (ms) when budgets were last saved from the UI. Helps the Canvas App detect updates.</value>
   </data>
 
+  <data name="HistoricoOrcamentoJson_DisplayName" xml:space="preserve">
+    <value>Monthly Budget History (JSON)</value>
+  </data>
+  <data name="HistoricoOrcamentoJson_Description" xml:space="preserve">
+    <value>JSON { "YYYY-MM": { "setores": {...}, "contas": {...} } } with every archived month. The Canvas App materializes rows from cr660_orcamentohistorico into this single input on OnStart. If empty, falls back to orcamentosJson/orcamentosContasJson as the seed for the current month.</value>
+  </data>
+
+  <data name="HistoricoOrcamentoJsonOutput_DisplayName" xml:space="preserve">
+    <value>Monthly Budget History (output)</value>
+  </data>
+  <data name="HistoricoOrcamentoJsonOutput_Description" xml:space="preserve">
+    <value>Echo of the canonical full history after any change (manual save or auto month-rollover). Useful if you prefer storing everything in a single cell instead of a Dataverse table.</value>
+  </data>
+
+  <data name="MesAtualCompetencia_DisplayName" xml:space="preserve">
+    <value>Current month (YYYY-MM)</value>
+  </data>
+  <data name="MesAtualCompetencia_Description" xml:space="preserve">
+    <value>Current month (YYYY-MM) detected by the control from the device clock. Use as the Title/key when patching a row in cr660_orcamentohistorico.</value>
+  </data>
+
+  <data name="MesAtualPayloadJson_DisplayName" xml:space="preserve">
+    <value>Current month payload (JSON)</value>
+  </data>
+  <data name="MesAtualPayloadJson_Description" xml:space="preserve">
+    <value>JSON { "setores": {...}, "contas": {...} } for the current month only. Use as PayloadJson when patching the history row.</value>
+  </data>
+
+  <data name="HistoricoUpdatedTimestamp_DisplayName" xml:space="preserve">
+    <value>History updated timestamp</value>
+  </data>
+  <data name="HistoricoUpdatedTimestamp_Description" xml:space="preserve">
+    <value>Epoch timestamp (ms) that changes whenever the history is updated: manual save or automatic creation of the current-month slot. Use as the OnChange trigger.</value>
+  </data>
+
   <data name="SelectedRecordId_DisplayName" xml:space="preserve">
     <value>Selected Record ID</value>
   </data>

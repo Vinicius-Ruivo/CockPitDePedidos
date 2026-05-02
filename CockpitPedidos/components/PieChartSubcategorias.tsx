@@ -30,6 +30,15 @@ const formatCurrencyCompact = (n: number): string => {
   return formatCurrencyBRL(n);
 };
 
+/** Percentual a partir da fração (0–1), vírgula decimal pt-BR. */
+const formatPctDisplay = (ratio: number, fractionDigits: number = 1): string => {
+  if (!Number.isFinite(ratio)) return "0%";
+  return `${(ratio * 100).toFixed(fractionDigits).replace(".", ",")}%`;
+};
+
+const truncatePieCenter = (s: string, max: number): string =>
+  s.length > max ? s.slice(0, max - 1) + "…" : s;
+
 /** Paleta de cores estável (um índice = uma cor) — boa contrast em fundo escuro/claro. */
 const PALETTE = [
   "#7c5cff", // roxo (cor de marca do app)
@@ -57,6 +66,45 @@ interface ISlice {
 }
 
 const TAU = Math.PI * 2;
+
+/**
+ * Índice da fatia sob o ponteiro a partir de coordenadas no espaço do SVG.
+ * Usado porque em alguns hosts (ex.: PCF no Canvas) o hit-test dos <path> da rosca falha;
+ * a legenda continua usando hover direto nos <li>.
+ */
+function sliceIndexFromDonutPoint(
+  slices: ReadonlyArray<ISlice>,
+  cx: number,
+  cy: number,
+  rInner: number,
+  rOuter: number,
+  x: number,
+  y: number,
+): number | null {
+  if (slices.length === 0) return null;
+  const dx = x - cx;
+  const dy = y - cy;
+  const dist = Math.hypot(dx, dy);
+  const margin = 14;
+  if (dist < rInner - 1 || dist > rOuter + margin) return null;
+
+  // Ângulo horário a partir do topo (12h), em [0, TAU)
+  const t = ((Math.atan2(dy, dx) + Math.PI / 2) % TAU + TAU) % TAU;
+
+  let cursor = 0;
+  for (let i = 0; i < slices.length; i++) {
+    const span = slices[i].pct * TAU;
+    const end = cursor + span;
+    const last = i === slices.length - 1;
+    if (last) {
+      if (t + 1e-10 >= cursor && t - 1e-10 <= end) return i;
+    } else if (t + 1e-10 >= cursor && t < end - 1e-10) {
+      return i;
+    }
+    cursor = end;
+  }
+  return null;
+}
 
 /** Converte ângulo (rad) → ponto na borda do círculo de raio r centrado em (cx, cy). */
 const polar = (cx: number, cy: number, r: number, angle: number) => ({
@@ -86,6 +134,13 @@ const arcPath = (
     "Z",
   ].join(" ");
 };
+
+/** Geometria fixa do SVG (viewBox) — usada no hit por ângulo e no desenho. */
+const PIE_SIZE = 280;
+const PIE_CX = PIE_SIZE / 2;
+const PIE_CY = PIE_SIZE / 2;
+const PIE_R_OUT = 120;
+const PIE_R_IN = 70;
 
 export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
   setor,
@@ -117,6 +172,76 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
   }, [slicesBase, total]);
 
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
+  const pieSvgRef = React.useRef<SVGSVGElement | null>(null);
+  /** Canvas / PCF: eventos no <svg> via React falham; listeners nativos no div cobrem o gráfico. */
+  const pieWrapRef = React.useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Só mapeamento retângulo → viewBox (sem getScreenCTM): no Power Apps o CTM costuma errar no iframe.
+   */
+  const updatePieHoverFromClient = React.useCallback(
+    (clientX: number, clientY: number) => {
+      const svg = pieSvgRef.current;
+      if (!svg || slices.length === 0) return;
+
+      const r = svg.getBoundingClientRect();
+      const vb = svg.viewBox.baseVal;
+      const vw = vb.width || PIE_SIZE;
+      const vh = vb.height || PIE_SIZE;
+      const curX = ((clientX - r.left) / Math.max(r.width, 1)) * vw;
+      const curY = ((clientY - r.top) / Math.max(r.height, 1)) * vh;
+
+      const idx = sliceIndexFromDonutPoint(
+        slices,
+        PIE_CX,
+        PIE_CY,
+        PIE_R_IN,
+        PIE_R_OUT,
+        curX,
+        curY,
+      );
+      setHoverIdx(idx);
+    },
+    [slices],
+  );
+
+  const updatePieHoverRef = React.useRef(updatePieHoverFromClient);
+  updatePieHoverRef.current = updatePieHoverFromClient;
+
+  React.useEffect(() => {
+    const wrap = pieWrapRef.current;
+    if (!wrap || slices.length === 0) return;
+
+    const apply = (cx: number, cy: number) => updatePieHoverRef.current(cx, cy);
+    const fromMouse = (e: MouseEvent) => apply(e.clientX, e.clientY);
+    const clear = () => setHoverIdx(null);
+    const fromTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) apply(t.clientX, t.clientY);
+    };
+
+    wrap.addEventListener("mousemove", fromMouse);
+    wrap.addEventListener("mouseenter", fromMouse);
+    wrap.addEventListener("mouseleave", clear);
+    wrap.addEventListener("pointermove", fromMouse as EventListener);
+    wrap.addEventListener("pointerdown", fromMouse as EventListener);
+    wrap.addEventListener("pointerleave", clear);
+    wrap.addEventListener("pointercancel", clear);
+    wrap.addEventListener("touchstart", fromTouch, { passive: true });
+    wrap.addEventListener("touchmove", fromTouch, { passive: true });
+
+    return () => {
+      wrap.removeEventListener("mousemove", fromMouse);
+      wrap.removeEventListener("mouseenter", fromMouse);
+      wrap.removeEventListener("mouseleave", clear);
+      wrap.removeEventListener("pointermove", fromMouse as EventListener);
+      wrap.removeEventListener("pointerdown", fromMouse as EventListener);
+      wrap.removeEventListener("pointerleave", clear);
+      wrap.removeEventListener("pointercancel", clear);
+      wrap.removeEventListener("touchstart", fromTouch);
+      wrap.removeEventListener("touchmove", fromTouch);
+    };
+  }, [slices.length]);
 
   // Fecha no ESC + bloqueia scroll do body enquanto aberto.
   React.useEffect(() => {
@@ -132,14 +257,13 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
     };
   }, [onClose]);
 
-  const SIZE = 280;
-  const CX = SIZE / 2;
-  const CY = SIZE / 2;
-  const R_OUT = 120;
-  const R_IN = 70;
-
   const realizadoTotal = slicesBase.reduce((s, a) => s + a.realizado, 0);
   const projetadoTotal = slicesBase.reduce((s, a) => s + a.projetado, 0);
+
+  const hoverSlice =
+    hoverIdx !== null && hoverIdx >= 0 && hoverIdx < slices.length
+      ? slices[hoverIdx]
+      : null;
 
   return (
     <div
@@ -180,13 +304,62 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                 </small>
               </div>
             ) : (
-              <svg
-                className="cp-pie-svg"
-                viewBox={`0 0 ${SIZE} ${SIZE}`}
-                role="img"
-                aria-label="Gráfico de pizza por conta contábil"
-              >
-                <g>
+              <div ref={pieWrapRef} className="cp-pie-chart-hit">
+                <svg
+                  ref={pieSvgRef}
+                  className="cp-pie-svg"
+                  viewBox={`0 0 ${PIE_SIZE} ${PIE_SIZE}`}
+                  role="img"
+                  aria-label="Gráfico de pizza por conta contábil"
+                >
+                {/*
+                  Texto central por baixo das fatias + pointer-events: none.
+                  Com hover: nome da conta + % em destaque; sem hover: total geral.
+                */}
+                {hoverSlice ? (
+                  <>
+                    <text
+                      x={PIE_CX}
+                      y={PIE_CY - 8}
+                      textAnchor="middle"
+                      className="cp-pie-center-hover-name"
+                      pointerEvents="none"
+                    >
+                      {truncatePieCenter(hoverSlice.agg.subcategoria, 26)}
+                    </text>
+                    <text
+                      x={PIE_CX}
+                      y={PIE_CY + 18}
+                      textAnchor="middle"
+                      className="cp-pie-center-hover-pct"
+                      pointerEvents="none"
+                    >
+                      {formatPctDisplay(hoverSlice.pct)}
+                    </text>
+                  </>
+                ) : (
+                  <>
+                    <text
+                      x={PIE_CX}
+                      y={PIE_CY - 6}
+                      textAnchor="middle"
+                      className="cp-pie-center-label"
+                      pointerEvents="none"
+                    >
+                      Total
+                    </text>
+                    <text
+                      x={PIE_CX}
+                      y={PIE_CY + 16}
+                      textAnchor="middle"
+                      className="cp-pie-center-value"
+                      pointerEvents="none"
+                    >
+                      {formatCurrencyCompact(total)}
+                    </text>
+                  </>
+                )}
+                <g className="cp-pie-slices">
                   {slices.map((s, i) => {
                     const isHover = hoverIdx === i;
                     // Pequeno deslocamento radial no hover para destacar a fatia.
@@ -196,13 +369,16 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                     return (
                       <path
                         key={s.agg.subcategoria}
-                        d={arcPath(CX, CY, R_OUT, R_IN, s.start, s.end)}
+                        className="cp-pie-slice"
+                        d={arcPath(PIE_CX, PIE_CY, PIE_R_OUT, PIE_R_IN, s.start, s.end)}
                         fill={s.color}
                         opacity={hoverIdx === null || isHover ? 1 : 0.55}
                         transform={`translate(${dx} ${dy})`}
-                        onMouseEnter={() => setHoverIdx(i)}
-                        onMouseLeave={() => setHoverIdx(null)}
-                        style={{ transition: "opacity 0.15s ease, transform 0.15s ease" }}
+                        style={{
+                          transition: "opacity 0.15s ease, transform 0.15s ease",
+                          cursor: "pointer",
+                          pointerEvents: "none",
+                        }}
                       >
                         <title>
                           {`${s.agg.subcategoria}\n${formatCurrencyBRL(s.agg.total)} (${(s.pct * 100).toFixed(1)}%)`}
@@ -211,23 +387,8 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                     );
                   })}
                 </g>
-                <text
-                  x={CX}
-                  y={CY - 6}
-                  textAnchor="middle"
-                  className="cp-pie-center-label"
-                >
-                  Total
-                </text>
-                <text
-                  x={CX}
-                  y={CY + 16}
-                  textAnchor="middle"
-                  className="cp-pie-center-value"
-                >
-                  {formatCurrencyCompact(total)}
-                </text>
-              </svg>
+                </svg>
+              </div>
             )}
           </div>
 
@@ -238,6 +399,8 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                 className={`cp-pie-legend-item${hoverIdx === i ? " cp-pie-legend-item--hover" : ""}`}
                 onMouseEnter={() => setHoverIdx(i)}
                 onMouseLeave={() => setHoverIdx(null)}
+                onPointerDown={() => setHoverIdx(i)}
+                onClick={() => setHoverIdx(i)}
               >
                 <span
                   className="cp-pie-legend-swatch"

@@ -4,10 +4,12 @@
  */
 
 import {
+  IHistoricoOrcamentos,
   IOrcamentosPayload,
   IPedido,
   ISetorAggregate,
   ISubcategoriaAggregate,
+  MesISO,
   OrcamentosContasMap,
   OrcamentosMap,
 } from "../types";
@@ -654,4 +656,265 @@ export function serializeNumberMap(
  */
 export function parseOrcamentosJson(raw?: string | null): Record<string, number> {
   return { ...parseOrcamentosPayload(raw).setores };
+}
+
+// =============================================================================
+// Histórico mensal de orçamentos
+// =============================================================================
+
+const MES_ISO_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** `MesISO` da data dada (calendário **local**). `undefined` se inválida. */
+export function mesISODe(d: Date | undefined | null): MesISO | undefined {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return undefined;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** `MesISO` do "agora" — usa o relógio do dispositivo do utilizador. */
+export function mesISOAtual(now: Date = new Date()): MesISO {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function isMesISOValido(s: string): s is MesISO {
+  return typeof s === "string" && MES_ISO_REGEX.test(s);
+}
+
+/** Rótulo curto pt-BR da competência. Ex.: `2026-05` → `Maio/26`. */
+export function mesISOLabel(mes: MesISO): string {
+  if (!isMesISOValido(mes)) return mes;
+  const [yStr, mStr] = mes.split("-");
+  const y = Number(yStr);
+  const m = Number(mStr);
+  const NOMES = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
+  return `${NOMES[m - 1]}/${String(y).slice(2)}`;
+}
+
+/**
+ * Faz parse do JSON do histórico. Aceita:
+ * - `{ "2026-04": { "setores": {...}, "contas": {...} }, "2026-05": { ... } }` (canônico)
+ * - Chaves fora do padrão são ignoradas (não quebram o resto).
+ */
+export function parseHistoricoOrcamentos(
+  raw?: string | null,
+): IHistoricoOrcamentos {
+  if (raw == null || typeof raw !== "string") return {};
+  let s = raw.trim();
+  if (!s) return {};
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(s);
+  } catch {
+    return {};
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  const out: Record<MesISO, IOrcamentosPayload> = {};
+  Object.entries(parsed as Record<string, unknown>).forEach(([k, v]) => {
+    if (!isMesISOValido(k)) return;
+    if (!v || typeof v !== "object" || Array.isArray(v)) return;
+    const o = v as Record<string, unknown>;
+    const setores = numMapFromUnknown(
+      (o[SETORES_KEY] ?? {}) as Record<string, unknown>,
+    );
+    const contas = numMapFromUnknown(
+      (o[CONTAS_KEY] ?? {}) as Record<string, unknown>,
+    );
+    out[k] = { setores, contas };
+  });
+  return out;
+}
+
+/** JSON canônico do histórico — chaves ordenadas crescentes. */
+export function serializeHistoricoOrcamentos(h: IHistoricoOrcamentos): string {
+  const sorted: Record<string, { setores: Record<string, number>; contas: Record<string, number> }> = {};
+  Object.keys(h)
+    .filter(isMesISOValido)
+    .sort()
+    .forEach((mes) => {
+      const p = h[mes];
+      const setores: Record<string, number> = {};
+      Object.keys(p.setores)
+        .sort((a, b) => a.localeCompare(b, "pt-BR"))
+        .forEach((k) => {
+          setores[k] = p.setores[k];
+        });
+      const contas: Record<string, number> = {};
+      Object.keys(p.contas)
+        .sort((a, b) => a.localeCompare(b, "pt-BR"))
+        .forEach((k) => {
+          contas[k] = p.contas[k];
+        });
+      sorted[mes] = { setores, contas };
+    });
+  return JSON.stringify(sorted);
+}
+
+/** Lista as competências arquivadas, ordem crescente. */
+export function mesesArquivados(h: IHistoricoOrcamentos): MesISO[] {
+  return Object.keys(h).filter(isMesISOValido).sort();
+}
+
+/** Devolve o payload daquele mês (vazio se inexistente). */
+export function orcamentosDoMes(
+  h: IHistoricoOrcamentos,
+  mes: MesISO,
+): IOrcamentosPayload {
+  const p = h[mes];
+  return p ?? { setores: {}, contas: {} };
+}
+
+/**
+ * Garante que o slot do `mes` existe em `h`. Se não existir, cria com payload
+ * vazio (decisão do produto: novo mês começa zerado). Devolve o histórico novo
+ * e um flag `criou` para o chamador saber que deve emitir aos outputs.
+ */
+export function garantirSlotDoMes(
+  h: IHistoricoOrcamentos,
+  mes: MesISO,
+): { historico: IHistoricoOrcamentos; criou: boolean } {
+  if (!isMesISOValido(mes)) return { historico: h, criou: false };
+  if (h[mes]) return { historico: h, criou: false };
+  return {
+    historico: { ...h, [mes]: { setores: {}, contas: {} } },
+    criou: true,
+  };
+}
+
+/** Substitui o slot do `mes` por `payload` (cópia rasa). */
+export function setSlotDoMes(
+  h: IHistoricoOrcamentos,
+  mes: MesISO,
+  payload: IOrcamentosPayload,
+): IHistoricoOrcamentos {
+  return {
+    ...h,
+    [mes]: {
+      setores: { ...payload.setores },
+      contas: { ...payload.contas },
+    },
+  };
+}
+
+/** Avança um mês (calendário gregoriano). */
+export function mesISOProximo(mes: MesISO): MesISO {
+  if (!isMesISOValido(mes)) return mesISOAtual();
+  const [yS, mS] = mes.split("-");
+  let y = Number(yS);
+  let m = Number(mS);
+  m += 1;
+  if (m > 12) {
+    m = 1;
+    y += 1;
+  }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+/** Lista cada `MesISO` de `inclusive` a `inclusive` (ordem crescente). */
+export function enumerateMesesInclusive(inicio: MesISO, fim: MesISO): MesISO[] {
+  const lo = inicio <= fim ? inicio : fim;
+  const hi = inicio <= fim ? fim : inicio;
+  const out: MesISO[] = [];
+  let cur: MesISO = lo;
+  for (let guard = 0; guard < 600; guard++) {
+    out.push(cur);
+    if (cur === hi) break;
+    cur = mesISOProximo(cur);
+  }
+  return out;
+}
+
+/**
+ * Soma os orçamentos (setores + contas) de todos os meses no intervalo
+ * [mesInicio, mesFim] usando o histórico — para análise de período nos gráficos.
+ */
+export function somarOrcamentosNoIntervalo(
+  historico: IHistoricoOrcamentos,
+  mesInicio: MesISO,
+  mesFim: MesISO,
+): IOrcamentosPayload {
+  const meses = enumerateMesesInclusive(mesInicio, mesFim);
+  const setores: Record<string, number> = {};
+  const contas: Record<string, number> = {};
+  meses.forEach((m) => {
+    const p = orcamentosDoMes(historico, m);
+    Object.keys(p.setores).forEach((k) => {
+      setores[k] = (setores[k] ?? 0) + p.setores[k];
+    });
+    Object.keys(p.contas).forEach((k) => {
+      contas[k] = (contas[k] ?? 0) + p.contas[k];
+    });
+  });
+  return { setores, contas };
+}
+
+/** Pedidos cuja data de solicitação cai em algum mês ∈ [mesInicio, mesFim]. */
+export function pedidosNoIntervaloMeses(
+  pedidos: ReadonlyArray<IPedido>,
+  mesInicio: MesISO,
+  mesFim: MesISO,
+): IPedido[] {
+  const lo = mesInicio <= mesFim ? mesInicio : mesFim;
+  const hi = mesInicio <= mesFim ? mesFim : mesInicio;
+  return (pedidos as IPedido[]).filter((p) => {
+    const m = mesISODe(p.dataSolicitacao);
+    if (!m) return false;
+    return m >= lo && m <= hi;
+  });
+}
+
+/** Parcela mensal do orçamento por setor na faixa (para linhas-guia na barra). */
+export function orcamentoSetorPorMesNaFaixa(
+  historico: IHistoricoOrcamentos,
+  mesInicio: MesISO,
+  mesFim: MesISO,
+  setor: string,
+): ReadonlyArray<{ mes: MesISO; valor: number }> {
+  return enumerateMesesInclusive(mesInicio, mesFim).map((m) => ({
+    mes: m,
+    valor: orcamentosDoMes(historico, m).setores[setor] ?? 0,
+  }));
+}
+
+/** Parcela mensal do orçamento por conta contábil na faixa. */
+export function orcamentoContaPorMesNaFaixa(
+  historico: IHistoricoOrcamentos,
+  mesInicio: MesISO,
+  mesFim: MesISO,
+  contaRotulo: string,
+): ReadonlyArray<{ mes: MesISO; valor: number }> {
+  return enumerateMesesInclusive(mesInicio, mesFim).map((m) => ({
+    mes: m,
+    valor: orcamentosDoMes(historico, m).contas[contaRotulo] ?? 0,
+  }));
+}
+
+/** Rótulo curto para marcas no gráfico: `2026-02` → `02/26`. */
+export function mesISOCompacto(mes: MesISO): string {
+  if (!isMesISOValido(mes)) return mes;
+  return `${mes.slice(5, 7)}/${mes.slice(2, 4)}`;
+}
+export function mesesDisponiveisParaGrafico(
+  historico: IHistoricoOrcamentos,
+  pedidos: ReadonlyArray<IPedido>,
+): MesISO[] {
+  const set = new Set<MesISO>();
+  mesesArquivados(historico).forEach((m) => set.add(m));
+  pedidos.forEach((p) => {
+    const m = mesISODe(p.dataSolicitacao);
+    if (m) set.add(m);
+  });
+  set.add(mesISOAtual());
+  const arr = Array.from(set).filter(isMesISOValido).sort();
+  /* Preenche meses intermédios entre o mínimo e o máximo já conhecidos —
+   * útil para escolher um intervalo contínuo (ex.: jan–mar) mesmo sem linha
+   * explícita para cada mês na tabela. */
+  if (arr.length >= 2) {
+    enumerateMesesInclusive(arr[0], arr[arr.length - 1]).forEach((m) =>
+      set.add(m),
+    );
+  }
+  return Array.from(set).filter(isMesISOValido).sort();
 }

@@ -1,7 +1,7 @@
 import * as React from "react";
 import "../Dashboard.css";
 import "../PedidoForm.css";
-import { IOrcamentosPayload, IPedido, IPedidoData } from "../types";
+import { IHistoricoOrcamentos, IOrcamentosPayload, IPedido, IPedidoData } from "../types";
 import {
   SETOR_LABELS_CANONICOS,
   SUBCATEGORIAS_TODAS,
@@ -23,6 +23,8 @@ import { EditDrawer } from "./EditDrawer";
 export interface IDashboardProps {
   pedidos: ReadonlyArray<IPedido>;
   orcamentos: IOrcamentosPayload;
+  /** Histórico mensal (competência → payload) — alimenta períodos nos gráficos. */
+  historicoOrcamentos: IHistoricoOrcamentos;
   loading: boolean;
   selectedRecordId?: string;
   width?: number;
@@ -53,6 +55,7 @@ const statusBucket = (s?: string): StatusFilter => {
 export const Dashboard: React.FC<IDashboardProps> = ({
   pedidos,
   orcamentos,
+  historicoOrcamentos,
   loading,
   selectedRecordId,
   width,
@@ -170,17 +173,6 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     });
     return ordenarPedidosPorChegada(filtrados);
   }, [pedidos, filtroTexto, filtroStatus, filtroSetor, filtroSubcategoria]);
-
-  // Agregação por setor aplicando o mesmo filtro (para os gráficos).
-  const agregadosSetorFiltrado = React.useMemo(
-    () =>
-      agregarPorSetor(
-        pedidosFiltrados as unknown as IPedido[],
-        orcamentos.setores,
-        SETOR_LABELS_CANONICOS,
-      ),
-    [pedidosFiltrados, orcamentos],
-  );
 
   // Counts para as "chips" de filtro
   const counts = React.useMemo(() => {
@@ -476,8 +468,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
             >
               <GraficosBarras
                 pedidos={pedidosFiltrados as unknown as IPedido[]}
-                agregadosSetor={agregadosSetorFiltrado}
-                orcamentos={orcamentos}
+                historicoOrcamentos={historicoOrcamentos}
               />
             </div>
           )}

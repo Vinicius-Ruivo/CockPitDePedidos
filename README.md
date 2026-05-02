@@ -149,6 +149,123 @@ Sem esse input o dashboard ainda funciona, mas o painel "Resumo de orçamento
 por setor" e o gráfico "Orçado × Realizado × Saldo" mostram apenas o lado
 "Realizado".
 
+### 2.1) Histórico mensal de orçamentos (recomendado)
+
+A partir da v1.1.31 o controlo guarda os orçamentos **mês a mês** automaticamente:
+no dia 1, ao abrir o dashboard, o controlo deteta a virada e cria um slot vazio
+para a nova competência (decisão: o mês novo começa zerado, sem copiar valores
+do mês anterior). O orçamento do mês passado fica congelado no histórico —
+útil para análises de "Orçamento × Realizado × Saldo ao longo do tempo".
+
+**Modelo de dados (Dataverse).** Crie a tabela `cr660_orcamentohistorico`
+(plural automático: `cr660_orcamentohistoricoes`) com:
+
+| Coluna lógica           | Tipo                | Observação                                     |
+|-------------------------|---------------------|------------------------------------------------|
+| `cr660_competencia`     | Texto (chave única) | `YYYY-MM` (ex.: `2026-05`). Use como nome.     |
+| `cr660_payloadjson`     | Texto multilinha    | JSON `{ "setores": {...}, "contas": {...} }`. |
+| (opcional) `cr660_orcamentototal` | Moeda     | Para visualizações no Power BI sem parse.      |
+
+**Bindings no Canvas.** No control PCF, ligue:
+
+```
+historicoOrcamentoJson = varHistoricoJson
+```
+
+**`OnStart` (carregar tudo de uma vez).** Constrói o JSON `{ "AAAA-MM": {...} }`
+a partir das linhas existentes da tabela:
+
+```powerfx
+Set(varHistoricoJson,
+    "{" &
+    Concat(
+        cr660_orcamentohistoricoes,
+        """" & cr660_competencia & """:" & cr660_payloadjson,
+        ","
+    ) &
+    "}"
+);
+Set(varLastHistoricoTs, 0);
+```
+
+**`OnChange` do controlo (Patch automático).** Dispara em qualquer mudança:
+salvamento manual ou virada de mês detectada pelo controlo.
+
+```powerfx
+If(
+    Cockpit1.historicoUpdatedTimestamp > varLastHistoricoTs,
+    With(
+        {
+            mes:     Cockpit1.mesAtualCompetencia,
+            payload: Cockpit1.mesAtualPayloadJson
+        },
+        If(
+            !IsBlank(mes) && !IsBlank(payload),
+            Patch(
+                cr660_orcamentohistoricoes,
+                Coalesce(
+                    LookUp(cr660_orcamentohistoricoes, cr660_competencia = mes),
+                    Defaults(cr660_orcamentohistoricoes)
+                ),
+                {
+                    cr660_competencia: mes,
+                    cr660_payloadjson: payload
+                }
+            )
+        )
+    );
+    Set(varLastHistoricoTs, Cockpit1.historicoUpdatedTimestamp)
+)
+```
+
+> **Como funciona a virada do mês?** Em todo `updateView`, o controlo lê o
+> mês corrente do dispositivo (`new Date().getMonth()`). Se não houver slot
+> para essa competência no histórico, ele cria um vazio e dispara
+> `historicoUpdatedTimestamp` — o `OnChange` acima persiste a nova linha em
+> `cr660_orcamentohistorico`. A partir daí, qualquer edição via «Salvar
+> orçamentos» grava na linha do mês corrente; os meses anteriores ficam
+> intactos.
+
+> **Linhas criadas ou alteradas no Dataverse (maker) e não aparecem no período?**
+> A variável `varHistoricoJson` costuma ser montada só no **`OnStart`**. Depois
+> de inserir ou editar linhas na tabela **fora** da app, é preciso **recarregar**
+> os dados e voltar a montar o JSON, senão o PCF continua com a cópia antiga em
+> memória — fevereiro não entra na lista «De / Até». Faça uma destas opções:
+>
+> - Fechar a app por completo e abrir de novo (dispara `OnStart`), ou  
+> - No **`OnVisible`** da tela principal (recomendado):
+>
+> ```powerfx
+> Refresh( 'Histórico de Orçamento' );;
+> Set(
+>     varHistoricoJson;
+>     "{" &
+>     Concat(
+>         'Histórico de Orçamento';
+>         """" & Competencia & """:" & PayloadJson;
+>         ","
+>     ) &
+>     "}"
+> )
+> ```
+>
+> Ajuste `'Histórico de Orçamento'`, `Competencia` e `PayloadJson` aos nomes
+> que o Power Apps mostrar na sua fonte / colunas.
+>
+> Opcionalmente, no **`OnChange`** do Cockpit, **depois** do `Patch` que grava
+> o histórico, acrescente o mesmo `Set(varHistoricoJson; …)` para a lista
+> refletir logo após guardar orçamentos pela UI.
+
+> **Tabela vs. célula única.** Se preferir guardar tudo numa só célula
+> (ex.: linha única numa lista de configuração), use
+> `historicoOrcamentoJsonOutput` em vez de `mesAtualPayloadJson` —
+> e ligue `historicoOrcamentoJson` à mesma variável.
+
+> **Retrocompatibilidade.** Se o `historicoOrcamentoJson` ficar vazio (Canvas
+> ainda não wireou a nova feature), o controlo continua a usar
+> `orcamentosJson`/`orcamentosContasJson` como ponto de partida do mês
+> corrente — nenhum app antigo quebra.
+
 ### 3) Reagir ao salvamento (Patch)
 
 Quando Luciana/Luciano clicam em **Salvar** no drawer, o PCF emite:

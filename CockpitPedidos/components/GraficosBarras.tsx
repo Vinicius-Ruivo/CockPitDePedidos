@@ -1,19 +1,27 @@
 import * as React from "react";
-import { ChartMetric, IOrcamentosPayload, IPedido, ISetorAggregate, OrcamentosMap } from "../types";
+import { ChartMetric, IHistoricoOrcamentos, IOrcamentosPayload, IPedido, ISetorAggregate, MesISO, OrcamentosMap } from "../types";
 import {
   agregarPorContaContabil,
   agregarPorFornecedor,
   agregarPorMes,
+  agregarPorSetor,
   agregarPorStatus,
+  mesesDisponiveisParaGrafico,
+  mesISOCompacto,
+  mesISOLabel,
+  mesISOAtual,
+  orcamentoContaPorMesNaFaixa,
+  orcamentoSetorPorMesNaFaixa,
+  pedidosNoIntervaloMeses,
+  somarOrcamentosNoIntervalo,
   totaisProjecao,
 } from "../utils/metrics";
-import { findSetorBySubcategoria, getSubcategoriasParaSetor, setorLabelExibicao } from "../constants/setoresOrganizacao";
+import { findSetorBySubcategoria, getSubcategoriasParaSetor, setorLabelExibicao, SETOR_LABELS_CANONICOS } from "../constants/setoresOrganizacao";
 
 export interface IGraficosBarrasProps {
   pedidos: ReadonlyArray<IPedido>;
-  agregadosSetor: ReadonlyArray<ISetorAggregate>;
-  /** Orçamentos (setores + contas) — KPIs usam só o teto por setor. */
-  orcamentos: IOrcamentosPayload;
+  /** Histórico mensal (Dataverse) — somado no período selecionado. */
+  historicoOrcamentos: IHistoricoOrcamentos;
 }
 
 interface IMetricOption {
@@ -351,25 +359,139 @@ interface IGroupedBarsProps {
     /** Quando true (saldo), valores negativos viram vermelho e usam |valor| no eixo. */
     signed?: boolean;
   }>;
+  /**
+   * Por rótulo do grupo (setor ou conta): parcelas mensais do orçamento no período.
+   * Usado para linhas horizontais cumulativas na barra «Orçamento».
+   */
+  orcamentoPorMesPorRotulo?: ReadonlyMap<
+    string,
+    ReadonlyArray<{ mes: MesISO; valor: number }>
+  >;
   emptyMessage?: string;
   /** Comprimento máximo no eixo X (contas longas precisam mais caracteres visíveis). */
   xLabelMax?: number;
   ariaLabel?: string;
 }
 
+/** Largura explícita em px para o conteúdo do SVG — evita encolher à largura do painel e ativa o scroll horizontal. */
+const chartSvgInnerStyle = (w: number): React.CSSProperties => ({
+  width: w,
+  minWidth: w,
+  maxWidth: "none",
+  flexShrink: 0,
+});
+
+/** Impede o host (Canvas/Fluent) de forçar o SVG a 100% da largura — mantém W px para o scroll. */
+const chartSvgElementStyle = (w: number, h: number): React.CSSProperties => ({
+  width: w,
+  minWidth: w,
+  maxWidth: w,
+  height: h,
+  display: "block",
+  flexShrink: 0,
+});
+
+/** Mesmo espírito do PieChartSubcategorias: coluna ativa “salta”, demais esmaecem. */
+const CHART_COL_HOVER_DIM = 0.52;
+const CHART_COL_HOVER_LIFT = 6;
+
+function chartColumnGroupProps(
+  gi: number,
+  hoverGi: number | null,
+  setHover: React.Dispatch<React.SetStateAction<number | null>>,
+): Pick<
+  React.SVGProps<SVGGElement>,
+  "className" | "style" | "onMouseEnter" | "onMouseLeave"
+> {
+  const active = hoverGi === gi;
+  const dimmed = hoverGi !== null && !active;
+  return {
+    className: "cp-chart-vgroup",
+    style: {
+      cursor: "pointer",
+      transition: "opacity 0.18s ease, transform 0.18s ease",
+      opacity: dimmed ? CHART_COL_HOVER_DIM : 1,
+      transform: active
+        ? `translate(0px, ${-CHART_COL_HOVER_LIFT}px)`
+        : "translate(0px, 0px)",
+    },
+    onMouseEnter: () => setHover(gi),
+    onMouseLeave: () => setHover(null),
+  };
+}
+
+/** Área invisível por coluna para hover mesmo com barras finas */
+const ChartColumnHitRect: React.FC<{
+  slotLeft: number;
+  slotWidth: number;
+  top: number;
+  height: number;
+}> = ({ slotLeft, slotWidth, top, height }) => (
+  <rect
+    x={slotLeft}
+    y={top}
+    width={slotWidth}
+    height={height}
+    fill="transparent"
+    pointerEvents="all"
+    aria-hidden
+  />
+);
+
+const truncate = (s: string, max: number): string =>
+  s.length > max ? s.slice(0, max - 1) + "…" : s;
+
+/** Linhas horizontais cumulativas na barra de orçamento (limite entre meses). */
+function OrcamentoMesDividerLines(props: {
+  grupoKey: string;
+  x: number;
+  barW: number;
+  totalOrc: number;
+  yFor: (v: number) => number;
+  breakdown: ReadonlyArray<{ mes: MesISO; valor: number }> | undefined;
+}): React.ReactElement | null {
+  const { grupoKey, x, barW, totalOrc, yFor, breakdown } = props;
+  if (!breakdown || breakdown.length < 2 || totalOrc <= 0) return null;
+  let cum = 0;
+  const lines: React.ReactNode[] = [];
+  for (let i = 0; i < breakdown.length - 1; i++) {
+    cum += breakdown[i].valor;
+    if (cum >= totalOrc - 1e-4) break;
+    const yy = yFor(cum);
+    lines.push(
+      <g key={`${grupoKey}-orc-div-${breakdown[i].mes}`}>
+        <title>{`Acumulado até ${mesISOLabel(breakdown[i].mes)}: ${formatBRL(cum)} · segmento seguinte: ${mesISOLabel(breakdown[i + 1].mes)}`}</title>
+        <line
+          x1={x}
+          x2={x + barW}
+          y1={yy}
+          y2={yy}
+          className="cp-chart-orc-mes-divider"
+          pointerEvents="none"
+        />
+      </g>,
+    );
+  }
+  if (lines.length === 0) return null;
+  return <g className="cp-chart-orc-mes-dividers">{lines}</g>;
+}
+
 const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
   setores,
   series,
+  orcamentoPorMesPorRotulo,
   emptyMessage = "Sem setores cadastrados ainda.",
   xLabelMax = 14,
   ariaLabel = "Gráfico de barras por setor",
 }) => {
+  const [hoverGi, setHoverGi] = React.useState<number | null>(null);
+
   if (setores.length === 0) {
     return <EmptyChart label={emptyMessage} />;
   }
 
   // Geometria do gráfico — escala via viewBox para acompanhar o container.
-  const PADDING = { top: 14, right: 14, bottom: 56, left: 64 };
+  const PADDING = { top: 14, right: orcamentoPorMesPorRotulo ? 40 : 14, bottom: 56, left: 64 };
   const HEIGHT = 320;
   const PER_GROUP_WIDTH = 110;
   const innerW = Math.max(560, setores.length * PER_GROUP_WIDTH);
@@ -405,14 +527,27 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
             {s.label}
           </span>
         ))}
+        {orcamentoPorMesPorRotulo && (
+          <span className="cp-chart-legend-item cp-chart-legend-item--mes-div">
+            <span className="cp-chart-sw cp-chart-sw-line cp-chart-sw-line--orc-mes" aria-hidden="true" />
+            Limite entre meses (orçamento)
+          </span>
+        )}
       </div>
 
-      <div className="cp-chart-svg-scroll">
+      <div
+        className="cp-chart-svg-scroll"
+        role="region"
+        aria-label="Gráfico: use a barra de rolagem horizontal para ver todas as categorias"
+      >
+        <div className="cp-chart-svg-inner" style={chartSvgInnerStyle(W)}>
         <svg
           className="cp-chart-svg"
+          style={chartSvgElementStyle(W, HEIGHT)}
           viewBox={`0 0 ${W} ${HEIGHT}`}
           width={W}
           height={HEIGHT}
+          preserveAspectRatio="xMinYMin meet"
           role="img"
           aria-label={ariaLabel}
         >
@@ -449,9 +584,16 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
           {/* Grupos (um por setor) */}
           {setores.map((d, gi) => {
             const gx = xFor(gi);
+            const slotLeft = PADDING.left + gi * PER_GROUP_WIDTH;
             const rotuloSetor = setorLabelExibicao(d.setor);
             return (
-              <g key={d.setor} className="cp-chart-vgroup">
+              <g key={d.setor} {...chartColumnGroupProps(gi, hoverGi, setHoverGi)}>
+                <ChartColumnHitRect
+                  slotLeft={slotLeft}
+                  slotWidth={PER_GROUP_WIDTH}
+                  top={PADDING.top}
+                  height={HEIGHT - PADDING.top}
+                />
                 {series.map((s, si) => {
                   const raw = (d[s.key] as number) ?? 0;
                   const isNeg = !!s.signed && raw < 0;
@@ -476,6 +618,16 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
                           {`${rotuloSetor}\n${s.label}: ${formatBRL(raw)}`}
                         </title>
                       </rect>
+                      {s.key === "orcamento" && (
+                        <OrcamentoMesDividerLines
+                          grupoKey={`${d.setor}-${String(s.key)}`}
+                          x={x}
+                          barW={barW}
+                          totalOrc={Math.abs((d.orcamento as number) ?? 0)}
+                          yFor={yFor}
+                          breakdown={orcamentoPorMesPorRotulo?.get(d.setor)}
+                        />
+                      )}
                       {h > 18 && (
                         <text
                           x={x + barW / 2}
@@ -510,13 +662,11 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
             );
           })}
         </svg>
+        </div>
       </div>
     </div>
   );
 };
-
-const truncate = (s: string, max: number): string =>
-  s.length > max ? s.slice(0, max - 1) + "…" : s;
 
 // =============================================================================
 // Subgráfico 2: Orçado × Comprometido (stacked) × Saldo Projetado
@@ -524,20 +674,27 @@ const truncate = (s: string, max: number): string =>
 
 const ProjecaoBarsSvg: React.FC<{
   setores: ReadonlyArray<ISetorAggregate>;
+  orcamentoPorMesPorRotulo?: ReadonlyMap<
+    string,
+    ReadonlyArray<{ mes: MesISO; valor: number }>
+  >;
   emptyMessage?: string;
   xLabelMax?: number;
   ariaLabel?: string;
 }> = ({
   setores,
+  orcamentoPorMesPorRotulo,
   emptyMessage = "Sem setores cadastrados ainda.",
   xLabelMax = 16,
   ariaLabel = "Projeção orçamentária por setor",
 }) => {
+  const [hoverGi, setHoverGi] = React.useState<number | null>(null);
+
   if (setores.length === 0) {
     return <EmptyChart label={emptyMessage} />;
   }
 
-  const PADDING = { top: 14, right: 14, bottom: 60, left: 64 };
+  const PADDING = { top: 14, right: orcamentoPorMesPorRotulo ? 40 : 14, bottom: 60, left: 64 };
   const HEIGHT = 340;
   const PER_GROUP_WIDTH = 130;
   const innerW = Math.max(640, setores.length * PER_GROUP_WIDTH);
@@ -586,14 +743,27 @@ const ProjecaoBarsSvg: React.FC<{
           <span className="cp-chart-sw" style={{ background: COLORS.saldo }} aria-hidden="true" />
           Saldo Projetado
         </span>
+        {orcamentoPorMesPorRotulo && (
+          <span className="cp-chart-legend-item cp-chart-legend-item--mes-div">
+            <span className="cp-chart-sw cp-chart-sw-line cp-chart-sw-line--orc-mes" aria-hidden="true" />
+            Limite entre meses (orçamento)
+          </span>
+        )}
       </div>
 
-      <div className="cp-chart-svg-scroll">
+      <div
+        className="cp-chart-svg-scroll"
+        role="region"
+        aria-label="Gráfico: use a barra de rolagem horizontal para ver todas as categorias"
+      >
+        <div className="cp-chart-svg-inner" style={chartSvgInnerStyle(W)}>
         <svg
           className="cp-chart-svg"
+          style={chartSvgElementStyle(W, HEIGHT)}
           viewBox={`0 0 ${W} ${HEIGHT}`}
           width={W}
           height={HEIGHT}
+          preserveAspectRatio="xMinYMin meet"
           role="img"
           aria-label={ariaLabel}
         >
@@ -656,8 +826,16 @@ const ProjecaoBarsSvg: React.FC<{
             // Linha de referência do orçamento dentro do grupo (auxilia leitura)
             const showOrcLine = d.orcamento > 0;
 
+            const slotLeft = PADDING.left + gi * PER_GROUP_WIDTH;
+
             return (
-              <g key={d.setor}>
+              <g key={d.setor} {...chartColumnGroupProps(gi, hoverGi, setHoverGi)}>
+                <ChartColumnHitRect
+                  slotLeft={slotLeft}
+                  slotWidth={PER_GROUP_WIDTH}
+                  top={PADDING.top}
+                  height={HEIGHT - PADDING.top}
+                />
                 {/* Orçamento */}
                 <rect
                   x={x1}
@@ -672,6 +850,14 @@ const ProjecaoBarsSvg: React.FC<{
                 >
                   <title>{`${rotuloSetor}\nOrçamento: ${formatBRL(d.orcamento)}`}</title>
                 </rect>
+                <OrcamentoMesDividerLines
+                  grupoKey={`${d.setor}-proj`}
+                  x={x1}
+                  barW={barW}
+                  totalOrc={d.orcamento}
+                  yFor={yFor}
+                  breakdown={orcamentoPorMesPorRotulo?.get(d.setor)}
+                />
 
                 {/* Comprometido (stacked) */}
                 {(() => {
@@ -778,6 +964,7 @@ const ProjecaoBarsSvg: React.FC<{
             );
           })}
         </svg>
+        </div>
       </div>
     </div>
   );
@@ -790,6 +977,8 @@ const ProjecaoBarsSvg: React.FC<{
 const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
   pedidos,
 }) => {
+  const [hoverGi, setHoverGi] = React.useState<number | null>(null);
+
   const dados = React.useMemo(
     () => agregarPorStatus(pedidos as IPedido[]),
     [pedidos],
@@ -814,12 +1003,19 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 
   return (
     <div className="cp-chart-svg-wrap">
-      <div className="cp-chart-svg-scroll">
+      <div
+        className="cp-chart-svg-scroll"
+        role="region"
+        aria-label="Gráfico: use a barra de rolagem horizontal para ver todas as categorias"
+      >
+        <div className="cp-chart-svg-inner" style={chartSvgInnerStyle(W)}>
         <svg
           className="cp-chart-svg"
+          style={chartSvgElementStyle(W, HEIGHT)}
           viewBox={`0 0 ${W} ${HEIGHT}`}
           width={W}
           height={HEIGHT}
+          preserveAspectRatio="xMinYMin meet"
           role="img"
           aria-label="Pedidos por status"
         >
@@ -858,8 +1054,16 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
             const h = (d.quantidade / yMax) * innerH;
             const x = gx + (groupInnerW - barW) / 2 + 6;
             const y = HEIGHT - PADDING.bottom - h;
+            const slotLeft = PADDING.left + gi * PER_GROUP_WIDTH;
+
             return (
-              <g key={d.status}>
+              <g key={d.status} {...chartColumnGroupProps(gi, hoverGi, setHoverGi)}>
+                <ChartColumnHitRect
+                  slotLeft={slotLeft}
+                  slotWidth={PER_GROUP_WIDTH}
+                  top={PADDING.top}
+                  height={HEIGHT - PADDING.top}
+                />
                 <rect
                   x={x}
                   y={y}
@@ -900,6 +1104,7 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
             );
           })}
         </svg>
+        </div>
       </div>
     </div>
   );
@@ -912,6 +1117,8 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
   pedidos,
 }) => {
+  const [hoverGi, setHoverGi] = React.useState<number | null>(null);
+
   const dados = React.useMemo(
     () => agregarPorMes(pedidos as IPedido[]),
     [pedidos],
@@ -960,12 +1167,19 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
           Acumulado
         </span>
       </div>
-      <div className="cp-chart-svg-scroll">
+      <div
+        className="cp-chart-svg-scroll"
+        role="region"
+        aria-label="Gráfico: use a barra de rolagem horizontal para ver todas as categorias"
+      >
+        <div className="cp-chart-svg-inner" style={chartSvgInnerStyle(W)}>
         <svg
           className="cp-chart-svg"
+          style={chartSvgElementStyle(W, HEIGHT)}
           viewBox={`0 0 ${W} ${HEIGHT}`}
           width={W}
           height={HEIGHT}
+          preserveAspectRatio="xMinYMin meet"
           role="img"
           aria-label="Evolução mensal"
         >
@@ -1002,8 +1216,16 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
             const h = (d.valorTotal / yMax) * innerH;
             const x = gx + (groupInnerW - barW) / 2 + 6;
             const y = HEIGHT - PADDING.bottom - h;
+            const slotLeft = PADDING.left + gi * PER_GROUP_WIDTH;
+
             return (
-              <g key={d.mesISO}>
+              <g key={d.mesISO} {...chartColumnGroupProps(gi, hoverGi, setHoverGi)}>
+                <ChartColumnHitRect
+                  slotLeft={slotLeft}
+                  slotWidth={PER_GROUP_WIDTH}
+                  top={PADDING.top}
+                  height={HEIGHT - PADDING.top}
+                />
                 <rect
                   x={x}
                   y={y}
@@ -1052,6 +1274,10 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
             d={cumulPath}
             className="cp-chart-line"
             fill="none"
+            style={{
+              opacity: hoverGi === null ? 1 : 0.35,
+              transition: "opacity 0.18s ease",
+            }}
           />
           {cumulPoints.map((p, i) => (
             <circle
@@ -1060,11 +1286,14 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
               cy={p.y}
               r={3.5}
               className="cp-chart-line-dot"
+              opacity={hoverGi === null || hoverGi === i ? 1 : 0.45}
+              style={{ transition: "opacity 0.18s ease" }}
             >
               <title>{`Acumulado: ${formatBRL(p.cumul)}`}</title>
             </circle>
           ))}
         </svg>
+        </div>
       </div>
       <div className="cp-chart-foot-note">
         Total acumulado no período: <strong>{formatBRL(cumulMax)}</strong>
@@ -1120,15 +1349,48 @@ const FornecedorHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 
 export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
   pedidos,
-  agregadosSetor,
-  orcamentos,
+  historicoOrcamentos,
 }) => {
   const [metric, setMetric] = React.useState<ChartMetric>("orcamento-vs-realizado");
   // Conjunto vazio = "Todos os setores".
   const [setoresFoco, setSetoresFoco] = React.useState<Set<string>>(new Set());
 
-  // Lista de setores disponíveis = todos que aparecem nos agregados (catálogo
-  // canônico + setores extras já presentes nos pedidos).
+  const opcoesMeses = React.useMemo(
+    () => mesesDisponiveisParaGrafico(historicoOrcamentos, pedidos as IPedido[]),
+    [historicoOrcamentos, pedidos],
+  );
+
+  const [mesDe, setMesDe] = React.useState(() => mesISOAtual());
+  const [mesAte, setMesAte] = React.useState(() => mesISOAtual());
+
+  React.useEffect(() => {
+    if (opcoesMeses.length === 0) return;
+    setMesDe((prev) => (opcoesMeses.includes(prev) ? prev : opcoesMeses[0]));
+    setMesAte((prev) =>
+      opcoesMeses.includes(prev) ? prev : opcoesMeses[opcoesMeses.length - 1],
+    );
+  }, [opcoesMeses]);
+
+  const pedidosPeriodo = React.useMemo(
+    () => pedidosNoIntervaloMeses(pedidos as IPedido[], mesDe, mesAte),
+    [pedidos, mesDe, mesAte],
+  );
+
+  const orcamentosPeriodo = React.useMemo(
+    () => somarOrcamentosNoIntervalo(historicoOrcamentos, mesDe, mesAte),
+    [historicoOrcamentos, mesDe, mesAte],
+  );
+
+  const agregadosSetor = React.useMemo(
+    () =>
+      agregarPorSetor(
+        pedidosPeriodo,
+        orcamentosPeriodo.setores,
+        SETOR_LABELS_CANONICOS,
+      ),
+    [pedidosPeriodo, orcamentosPeriodo],
+  );
+
   const setoresDisponiveis = React.useMemo(
     () => agregadosSetor.map((a) => a.setor),
     [agregadosSetor],
@@ -1150,11 +1412,10 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
   const todosSelecionados = setoresFoco.size === 0;
 
   const pedidosVisiveis = React.useMemo<IPedido[]>(() => {
-    if (todosSelecionados) return pedidos as IPedido[];
-    return (pedidos as IPedido[]).filter((p) =>
-      setoresFoco.has(setorEfetivoDe(p)),
-    );
-  }, [pedidos, setoresFoco, todosSelecionados]);
+    const base = pedidosPeriodo as IPedido[];
+    if (todosSelecionados) return base;
+    return base.filter((p) => setoresFoco.has(setorEfetivoDe(p)));
+  }, [pedidosPeriodo, setoresFoco, todosSelecionados]);
 
   const agregadosVisiveis = React.useMemo<ISetorAggregate[]>(() => {
     if (todosSelecionados) return agregadosSetor as ISetorAggregate[];
@@ -1165,21 +1426,21 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
 
   // Orçamentos limitados ao foco — KPIs usam teto por setor; contas filtradas pelos setores.
   const orcamentosVisiveis = React.useMemo<IOrcamentosPayload>(() => {
-    if (todosSelecionados) return orcamentos;
+    if (todosSelecionados) return orcamentosPeriodo;
     const setores: OrcamentosMap = {};
-    Object.keys(orcamentos.setores).forEach((s) => {
-      if (setoresFoco.has(s)) setores[s] = orcamentos.setores[s];
+    Object.keys(orcamentosPeriodo.setores).forEach((s) => {
+      if (setoresFoco.has(s)) setores[s] = orcamentosPeriodo.setores[s];
     });
     const contas: Record<string, number> = {};
     setoresFoco.forEach((setor) => {
       getSubcategoriasParaSetor(setor).forEach((sub) => {
-        if (orcamentos.contas[sub] !== undefined) {
-          contas[sub] = orcamentos.contas[sub];
+        if (orcamentosPeriodo.contas[sub] !== undefined) {
+          contas[sub] = orcamentosPeriodo.contas[sub];
         }
       });
     });
     return { setores, contas };
-  }, [orcamentos, setoresFoco, todosSelecionados]);
+  }, [orcamentosPeriodo, setoresFoco, todosSelecionados]);
 
   const valorTotalVisivel = React.useMemo(
     () =>
@@ -1199,6 +1460,29 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
     [pedidosVisiveis, orcamentosVisiveis.contas],
   );
 
+  /** Parcelas mensais do orçamento por setor — linhas na barra cinza. */
+  const orcamentoPorMesPorRotuloSetor = React.useMemo(() => {
+    const m = new Map<string, ReadonlyArray<{ mes: MesISO; valor: number }>>();
+    agregadosVisiveis.forEach((a) => {
+      m.set(
+        a.setor,
+        orcamentoSetorPorMesNaFaixa(historicoOrcamentos, mesDe, mesAte, a.setor),
+      );
+    });
+    return m;
+  }, [agregadosVisiveis, historicoOrcamentos, mesDe, mesAte]);
+
+  const orcamentoPorMesPorRotuloConta = React.useMemo(() => {
+    const m = new Map<string, ReadonlyArray<{ mes: MesISO; valor: number }>>();
+    agregadosConta.forEach((a) => {
+      m.set(
+        a.setor,
+        orcamentoContaPorMesNaFaixa(historicoOrcamentos, mesDe, mesAte, a.setor),
+      );
+    });
+    return m;
+  }, [agregadosConta, historicoOrcamentos, mesDe, mesAte]);
+
   const toggleSetor = React.useCallback((setor: string) => {
     setSetoresFoco((prev) => {
       const next = new Set(prev);
@@ -1211,10 +1495,69 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
   const selecionarTodos = React.useCallback(() => setSetoresFoco(new Set()), []);
   const limpar = React.useCallback(() => setSetoresFoco(new Set()), []);
 
+  const onChangeMesDe = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const v = e.target.value;
+      setMesDe(v);
+      setMesAte((prev) => (v > prev ? v : prev));
+    },
+    [],
+  );
+
+  const onChangeMesAte = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const v = e.target.value;
+      setMesAte(v);
+      setMesDe((prev) => (v < prev ? v : prev));
+    },
+    [],
+  );
+
   const current = METRICS.find((m) => m.id === metric) ?? METRICS[0];
 
   return (
     <div className="cp-chart">
+      <div className="cp-chart-period" role="group" aria-label="Período da análise">
+        <div className="cp-chart-period-head">
+          <span className="cp-chart-period-title">Período da análise</span>
+          <span className="cp-chart-period-hint">
+            Orçamento = soma dos meses no histórico; valores realizados = pedidos com data no intervalo.
+          </span>
+        </div>
+        <div className="cp-chart-period-controls">
+          <label className="cp-chart-period-field">
+            <span className="cp-chart-period-label">De</span>
+            <select
+              className="cp-chart-period-select"
+              value={mesDe}
+              onChange={onChangeMesDe}
+              aria-label="Mês inicial"
+            >
+              {opcoesMeses.map((m) => (
+                <option key={m} value={m}>
+                  {mesISOLabel(m)} ({m})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="cp-chart-period-field">
+            <span className="cp-chart-period-label">Até</span>
+            <select
+              className="cp-chart-period-select"
+              value={mesAte}
+              onChange={onChangeMesAte}
+              aria-label="Mês final"
+            >
+              {opcoesMeses.map((m) => (
+                <option key={`ate-${m}`} value={m}>
+                  {mesISOLabel(m)} ({m})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
       <KpiStrip pedidos={pedidosVisiveis} orcamentos={orcamentosVisiveis.setores} />
 
       <ChipFiltroSetor
@@ -1224,7 +1567,7 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
         onSelecionarTodos={selecionarTodos}
         onLimpar={limpar}
         totalPedidosVisiveis={pedidosVisiveis.length}
-        totalPedidosOriginal={pedidos.length}
+        totalPedidosOriginal={pedidosPeriodo.length}
         valorTotalVisivel={valorTotalVisivel}
       />
 
@@ -1257,10 +1600,14 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
               { key: "realizado", label: "Realizado", color: COLORS.realizado },
               { key: "saldo", label: "Saldo", color: COLORS.saldo, signed: true },
             ]}
+            orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloSetor}
           />
         )}
         {metric === "orcamento-vs-projetado" && (
-          <ProjecaoBarsSvg setores={agregadosVisiveis} />
+          <ProjecaoBarsSvg
+            setores={agregadosVisiveis}
+            orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloSetor}
+          />
         )}
         {metric === "orcamento-vs-realizado-contas" && (
           <GroupedBarsSvg
@@ -1273,6 +1620,7 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
             emptyMessage="Nenhuma conta contábil nos pedidos nem no orçamento."
             xLabelMax={22}
             ariaLabel="Gráfico de barras por conta contábil"
+            orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloConta}
           />
         )}
         {metric === "orcamento-vs-projetado-contas" && (
@@ -1281,6 +1629,7 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
             emptyMessage="Nenhuma conta contábil nos pedidos nem no orçamento."
             xLabelMax={22}
             ariaLabel="Projeção orçamentária por conta contábil"
+            orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloConta}
           />
         )}
         {metric === "qtd-por-status" && <StatusBarsSvg pedidos={pedidosVisiveis} />}

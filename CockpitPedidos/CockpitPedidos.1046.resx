@@ -297,6 +297,41 @@
     <value>Timestamp epoch (ms) do último salvamento de orçamentos pela interface. Ajuda o app a detectar mudanças.</value>
   </data>
 
+  <data name="HistoricoOrcamentoJson_DisplayName" xml:space="preserve">
+    <value>Histórico mensal de orçamentos (JSON)</value>
+  </data>
+  <data name="HistoricoOrcamentoJson_Description" xml:space="preserve">
+    <value>JSON { "AAAA-MM": { "setores": {...}, "contas": {...} } } com todos os meses já arquivados. O Canvas materializa as linhas de cr660_orcamentohistorico aqui no OnStart. Se vazio, o controlo usa orcamentosJson/orcamentosContasJson como ponto de partida do mês corrente.</value>
+  </data>
+
+  <data name="HistoricoOrcamentoJsonOutput_DisplayName" xml:space="preserve">
+    <value>Histórico mensal de orçamentos (saída)</value>
+  </data>
+  <data name="HistoricoOrcamentoJsonOutput_Description" xml:space="preserve">
+    <value>Eco do histórico completo (canônico) após qualquer alteração: salvamento manual ou virada de mês detectada automaticamente. Útil se quiser guardar tudo numa única célula em vez de tabela.</value>
+  </data>
+
+  <data name="MesAtualCompetencia_DisplayName" xml:space="preserve">
+    <value>Competência do mês corrente</value>
+  </data>
+  <data name="MesAtualCompetencia_Description" xml:space="preserve">
+    <value>Mês corrente (AAAA-MM) detetado pelo controlo a partir do relógio do dispositivo. Use como Title/chave da linha em cr660_orcamentohistorico no Patch.</value>
+  </data>
+
+  <data name="MesAtualPayloadJson_DisplayName" xml:space="preserve">
+    <value>Orçamento do mês corrente (JSON)</value>
+  </data>
+  <data name="MesAtualPayloadJson_Description" xml:space="preserve">
+    <value>JSON { "setores": {...}, "contas": {...} } apenas do mês corrente. Use como PayloadJson no Patch da tabela de histórico.</value>
+  </data>
+
+  <data name="HistoricoUpdatedTimestamp_DisplayName" xml:space="preserve">
+    <value>Timestamp do histórico</value>
+  </data>
+  <data name="HistoricoUpdatedTimestamp_Description" xml:space="preserve">
+    <value>Timestamp epoch (ms) que muda quando o histórico é atualizado: salvamento manual do mês corrente ou criação automática do slot na virada do mês. Use como gatilho do OnChange.</value>
+  </data>
+
   <data name="SelectedRecordId_DisplayName" xml:space="preserve">
     <value>ID do Pedido Selecionado</value>
   </data>

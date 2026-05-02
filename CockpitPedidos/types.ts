@@ -151,6 +151,23 @@ export function emptyOrcamentosPayload(): IOrcamentosPayload {
   return { setores: {}, contas: {} };
 }
 
+/** Competência mensal no formato `YYYY-MM` (ex.: `2026-05`).
+ *  Calculada com calendário **local** — alinha com o que o usuário vê. */
+export type MesISO = string;
+
+/**
+ * Histórico mensal de orçamentos.
+ *
+ * Chave = `YYYY-MM`; valor = o `IOrcamentosPayload` que vigorou naquele mês.
+ * No PCF, é o mapa que sobrevive entre sessões via `historicoOrcamentoJson`
+ * (input vindo do Canvas, que materializa as linhas da tabela Dataverse).
+ */
+export type IHistoricoOrcamentos = Readonly<Record<MesISO, IOrcamentosPayload>>;
+
+export function emptyHistoricoOrcamentos(): IHistoricoOrcamentos {
+  return {};
+}
+
 /** Métrica selecionada no painel de gráficos. */
 export type ChartMetric =
   | "orcamento-vs-realizado"

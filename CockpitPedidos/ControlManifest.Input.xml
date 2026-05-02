@@ -2,7 +2,7 @@
 <manifest>
   <control namespace="CockpitPedidos"
            constructor="CockpitPedidos"
-           version="1.1.22"
+           version="1.1.34"
            display-name-key="CockpitPedidos_DisplayName"
            description-key="CockpitPedidos_Description"
            control-type="virtual">
@@ -215,6 +215,56 @@
     <property name="orcamentosUpdatedTimestamp"
               display-name-key="OrcamentosUpdatedTimestamp_DisplayName"
               description-key="OrcamentosUpdatedTimestamp_Description"
+              of-type="Whole.None"
+              usage="output"
+              required="false" />
+
+    <!-- INPUT: histórico mensal completo, JSON
+         { "YYYY-MM": { "setores": {...}, "contas": {...} } , ... }.
+         O Canvas materializa as linhas da tabela cr660_orcamentohistorico
+         neste JSON e injeta. Se vazio, o controlo recorre aos legados
+         orcamentosJson/orcamentosContasJson como seed do mês corrente. -->
+    <property name="historicoOrcamentoJson"
+              display-name-key="HistoricoOrcamentoJson_DisplayName"
+              description-key="HistoricoOrcamentoJson_Description"
+              of-type="SingleLine.Text"
+              usage="input"
+              required="false" />
+
+    <!-- OUTPUT: histórico mensal completo após qualquer mudança (save manual
+         ou virada de mês detectada automaticamente). Útil se o Canvas
+         preferir guardar tudo numa única célula em vez de tabela. -->
+    <property name="historicoOrcamentoJsonOutput"
+              display-name-key="HistoricoOrcamentoJsonOutput_DisplayName"
+              description-key="HistoricoOrcamentoJsonOutput_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: competência (YYYY-MM) do mês corrente. O Canvas usa como
+         primary key na linha da tabela cr660_orcamentohistorico. -->
+    <property name="mesAtualCompetencia"
+              display-name-key="MesAtualCompetencia_DisplayName"
+              description-key="MesAtualCompetencia_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: JSON apenas do payload do mês corrente:
+         { "setores": {...}, "contas": {...} }. Permite Patch numa única
+         linha sem reenviar o histórico inteiro. -->
+    <property name="mesAtualPayloadJson"
+              display-name-key="MesAtualPayloadJson_DisplayName"
+              description-key="MesAtualPayloadJson_Description"
+              of-type="SingleLine.Text"
+              usage="output"
+              required="false" />
+
+    <!-- OUTPUT: timestamp epoch (ms) — muda em todo save manual ou virada
+         de mês. Use no OnChange como gatilho do Patch. -->
+    <property name="historicoUpdatedTimestamp"
+              display-name-key="HistoricoUpdatedTimestamp_DisplayName"
+              description-key="HistoricoUpdatedTimestamp_Description"
               of-type="Whole.None"
               usage="output"
               required="false" />

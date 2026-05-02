@@ -425,6 +425,7 @@
 .cp-dash-grid.cp-dash-grid--graficos-fullscreen .cp-dash-graficos-expand > .cp-chart {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -432,6 +433,7 @@
 }
 
 .cp-dash-grid.cp-dash-grid--graficos-fullscreen .cp-dash-graficos-expand .cp-chart-kpis,
+.cp-dash-grid.cp-dash-grid--graficos-fullscreen .cp-dash-graficos-expand .cp-chart-period,
 .cp-dash-grid.cp-dash-grid--graficos-fullscreen .cp-dash-graficos-expand .cp-chart-filter,
 .cp-dash-grid.cp-dash-grid--graficos-fullscreen .cp-dash-graficos-expand .cp-chart-head {
   flex-shrink: 0;
@@ -440,7 +442,9 @@
 .cp-dash-grid.cp-dash-grid--graficos-fullscreen .cp-dash-graficos-expand .cp-chart-body {
   flex: 1 1 auto;
   min-height: 200px;
-  overflow: auto;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .cp-dash-graficos-bar {
@@ -541,6 +545,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
 .cp-dash-panel-head {
@@ -1478,11 +1483,25 @@
   justify-content: center;
   min-height: 280px;
 }
+
+/* Área finita por baixo do SVG — captura mouse/ponteiro no PCF onde o <svg> não recebe React events */
+.cp-pie-chart-hit {
+  display: inline-block;
+  line-height: 0;
+  position: relative;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+}
 .cp-pie-svg {
   width: 100%;
   max-width: 320px;
   height: auto;
   display: block;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .cp-pie-empty {
   text-align: center;
@@ -1499,11 +1518,32 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  pointer-events: none;
 }
 .cp-pie-center-value {
   fill: var(--cp-text);
   font-size: 16px;
   font-weight: 700;
+  pointer-events: none;
+}
+
+.cp-pie-center-hover-name {
+  fill: var(--cp-text-soft);
+  font-size: 9.5px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.cp-pie-center-hover-pct {
+  fill: var(--cp-text);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.cp-pie-slice {
+  cursor: pointer;
 }
 
 .cp-pie-legend {
@@ -1593,7 +1633,16 @@
    GRÁFICOS DE BARRAS — painel analítico do dashboard
    ============================================================================= */
 
-.cp-chart { display: flex; flex-direction: column; gap: 14px; }
+.cp-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Permite encolher dentro do flex/grid do painel — senão o SVG largo estica o painel e some o scroll horizontal */
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
 /* ---- KPI strip (topo do painel de gráficos) ---- */
 .cp-chart-kpis {
@@ -1646,6 +1695,63 @@
 .cp-chart-kpi--warn   .cp-chart-kpi-value { color: #f59e0b; }
 .cp-chart-kpi--good   .cp-chart-kpi-value { color: #22c55e; }
 .cp-chart-kpi--accent .cp-chart-kpi-value { color: #b39bff; }
+
+/* ---- Período da análise (intervalo de meses) ---- */
+.cp-chart-period {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  background: var(--cp-bg-elev-2);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  padding: 10px 12px;
+}
+.cp-chart-period-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cp-chart-period-title {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cp-text-faint);
+  font-weight: 700;
+}
+.cp-chart-period-hint {
+  font-size: 11px;
+  color: var(--cp-text-soft);
+  line-height: 1.35;
+}
+.cp-chart-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.cp-chart-period-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cp-chart-period-label {
+  font-size: 11px;
+  color: var(--cp-text-soft);
+  font-weight: 600;
+}
+.cp-chart-period-select {
+  min-width: 180px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-bg-elev-3);
+  color: var(--cp-text);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---- Filtro multi-select de setores (chips) ---- */
 .cp-chart-filter {
@@ -1809,6 +1915,12 @@
   border-radius: var(--cp-radius);
   padding: 16px;
   min-height: 320px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Rolagem horizontal fica no .cp-chart-svg-scroll, abaixo do desenho do gráfico */
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .cp-chart-empty {
@@ -1831,23 +1943,42 @@
   flex-direction: column;
   gap: 10px;
   min-height: 320px;
+  min-width: 0;
 }
 .cp-chart-svg-scroll {
-  overflow-x: auto;
+  /* scroll horizontal na faixa imediatamente abaixo do SVG */
+  overflow-x: scroll;
   overflow-y: hidden;
-  padding: 4px 2px 2px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 2px 8px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.08);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
-.cp-chart-svg-scroll::-webkit-scrollbar { height: 8px; }
-.cp-chart-svg-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+.cp-chart-svg-scroll::-webkit-scrollbar { height: 10px; }
+.cp-chart-svg-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
+}
+.cp-chart-svg-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+}
+.cp-chart-svg-inner {
+  display: block;
+  max-width: none;
+  flex-shrink: 0;
+}
+.cp-chart-svg-inner .cp-chart-svg {
+  max-width: none !important;
+  /* Canvas / tema host às vezes força svg { max-width: 100% } */
 }
 .cp-chart-svg {
   display: block;
   height: auto;
-  max-width: none;
+  max-width: none !important;
 }
 
 .cp-chart-legend {
@@ -1915,8 +2046,16 @@
   pointer-events: none;
 }
 .cp-chart-bar-label--neg { fill: #ef4444; }
+.cp-chart-vgroup {
+  cursor: pointer;
+}
+.cp-chart-vgroup .cp-chart-x-label,
+.cp-chart-vgroup .cp-chart-x-sublabel,
+.cp-chart-vgroup .cp-chart-bar-label {
+  pointer-events: none;
+}
+
 .cp-chart-svg-bar { transition: opacity 0.15s ease; }
-.cp-chart-svg-bar:hover { opacity: 0.78; }
 
 /* Linha cumulativa (evolução mensal) */
 .cp-chart-line {
@@ -1945,6 +2084,27 @@
   stroke-width: 1.5;
   stroke-dasharray: 3 3;
   opacity: 0.85;
+}
+
+/* Traços cumulativos entre meses na barra de orçamento (período multi-mês) */
+.cp-chart-orc-mes-divider {
+  stroke: rgba(255, 255, 255, 0.62);
+  stroke-width: 1.35;
+  stroke-dasharray: 5 4;
+}
+.cp-chart-orc-mes-dividers {
+  pointer-events: none;
+}
+.cp-chart-legend-item--mes-div {
+  opacity: 0.92;
+}
+.cp-chart-sw-line--orc-mes {
+  background: transparent !important;
+  box-sizing: border-box;
+  min-width: 22px;
+  height: 0 !important;
+  border-radius: 0 !important;
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.55);
 }
 
 /* -------- Barras horizontais (responsável / top pedidos) -------- */
@@ -2048,6 +2208,12 @@
 }
 .cp-cockpit[data-theme="light"] .cp-chart-ref-line {
   stroke: rgba(0, 0, 0, 0.6);
+}
+.cp-cockpit[data-theme="light"] .cp-chart-orc-mes-divider {
+  stroke: rgba(15, 23, 42, 0.52);
+}
+.cp-cockpit[data-theme="light"] .cp-chart-sw-line--orc-mes {
+  border-bottom-color: rgba(15, 23, 42, 0.42);
 }
 .cp-cockpit[data-theme="light"] .cp-chart-hbar-text {
   text-shadow: 0 0 3px rgba(255, 255, 255, 0.6);
