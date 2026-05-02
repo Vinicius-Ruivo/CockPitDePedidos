@@ -1360,11 +1360,19 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
     [historicoOrcamentos, pedidos],
   );
 
+  /** 1.ª sincronização com as opções: intervalo completo (min→max), não só o mês «hoje». */
+  const periodoPadraoAplicado = React.useRef(false);
   const [mesDe, setMesDe] = React.useState(() => mesISOAtual());
   const [mesAte, setMesAte] = React.useState(() => mesISOAtual());
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (opcoesMeses.length === 0) return;
+    if (!periodoPadraoAplicado.current) {
+      periodoPadraoAplicado.current = true;
+      setMesDe(opcoesMeses[0]);
+      setMesAte(opcoesMeses[opcoesMeses.length - 1]);
+      return;
+    }
     setMesDe((prev) => (opcoesMeses.includes(prev) ? prev : opcoesMeses[0]));
     setMesAte((prev) =>
       opcoesMeses.includes(prev) ? prev : opcoesMeses[opcoesMeses.length - 1],
