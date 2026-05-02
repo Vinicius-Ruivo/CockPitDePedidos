@@ -15,6 +15,7 @@ import {
   ordenarPedidosPorChegada,
   totaisGlobais,
 } from "../utils/metrics";
+import { CONTROL_VERSION } from "../constants/controlVersion";
 import { PedidoCard } from "./PedidoCard";
 import { ResumoOrcamento } from "./ResumoOrcamento";
 import { GraficosBarras } from "./GraficosBarras";
@@ -224,7 +225,12 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       <header className="cp-dash-header">
         <div className="cp-dash-header-title">
           <span className="cp-dash-header-bar" aria-hidden="true" />
-          <div className="cp-dash-header-eyebrow">CockPit - Pedidos de Requisição</div>
+          <div className="cp-dash-header-eyebrow">
+            <span>CockPit - Pedidos de Requisição</span>
+            <span className="cp-control-version" title={`Versão do controlo PCF`}>
+              v{CONTROL_VERSION}
+            </span>
+          </div>
         </div>
 
         <div className="cp-dash-header-right">

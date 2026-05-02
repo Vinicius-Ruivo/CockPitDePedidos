@@ -197,6 +197,19 @@
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.cp-control-version {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--cp-text-soft);
+  opacity: 0.9;
+  white-space: nowrap;
 }
 
 .cp-dash-header-subtitle {

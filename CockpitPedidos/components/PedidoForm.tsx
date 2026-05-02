@@ -9,6 +9,7 @@ import {
   mergeSetoresComCatalogo,
   setorLabelExibicao,
 } from "../constants/setoresOrganizacao";
+import { CONTROL_VERSION } from "../constants/controlVersion";
 import { IPedidoData, STATUS_OPTIONS } from "../types";
 
 export type { IPedidoData } from "../types";
@@ -411,7 +412,12 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
       {!embedded && (
         <header className="cp-header">
           <div className="cp-header-left">
-            <div className="cp-header-title">CockPit - Pedidos de Requisição</div>
+            <div className="cp-header-title">
+              <span>CockPit - Pedidos de Requisição</span>
+              <span className="cp-control-version" title={`Versão do controlo PCF`}>
+                v{CONTROL_VERSION}
+              </span>
+            </div>
             <div className="cp-header-subtitle">
               {current.tituloPedido || current.solicitante
                 ? `Solicitante: ${current.tituloPedido || current.solicitante}`
