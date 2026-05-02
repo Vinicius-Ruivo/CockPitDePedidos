@@ -679,6 +679,21 @@ export function isMesISOValido(s: string): s is MesISO {
   return typeof s === "string" && MES_ISO_REGEX.test(s);
 }
 
+/**
+ * Normaliza chaves vindas do Dataverse / Power Fx: `2026-2`, espaços, etc.
+ * → `2026-02`. Chaves inválidas → `undefined`.
+ */
+export function normalizarChaveCompetenciaMesISO(k: string): MesISO | undefined {
+  const s = k.trim();
+  if (isMesISOValido(s)) return s;
+  const m = /^(\d{4})-(\d{1,2})$/.exec(s);
+  if (!m) return undefined;
+  const mo = Number(m[2]);
+  if (mo < 1 || mo > 12) return undefined;
+  const canon = `${m[1]}-${String(mo).padStart(2, "0")}`;
+  return isMesISOValido(canon) ? canon : undefined;
+}
+
 /** Rótulo curto pt-BR da competência. Ex.: `2026-05` → `Maio/26`. */
 export function mesISOLabel(mes: MesISO): string {
   if (!isMesISOValido(mes)) return mes;
@@ -695,7 +710,8 @@ export function mesISOLabel(mes: MesISO): string {
 /**
  * Faz parse do JSON do histórico. Aceita:
  * - `{ "2026-04": { "setores": {...}, "contas": {...} }, "2026-05": { ... } }` (canônico)
- * - Chaves fora do padrão são ignoradas (não quebram o resto).
+ * - Valores por mês podem vir como objeto ou como **string JSON** (coluna texto).
+ * - Chaves `YYYY-M` são normalizadas para `YYYY-MM`.
  */
 export function parseHistoricoOrcamentos(
   raw?: string | null,
@@ -713,16 +729,32 @@ export function parseHistoricoOrcamentos(
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
   const out: Record<MesISO, IOrcamentosPayload> = {};
   Object.entries(parsed as Record<string, unknown>).forEach(([k, v]) => {
-    if (!isMesISOValido(k)) return;
-    if (!v || typeof v !== "object" || Array.isArray(v)) return;
-    const o = v as Record<string, unknown>;
+    const mesKey = normalizarChaveCompetenciaMesISO(k);
+    if (!mesKey) return;
+
+    let obj: unknown = v;
+    if (typeof v === "string") {
+      try {
+        const inner = JSON.parse(v.trim());
+        if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+          obj = inner;
+        } else {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
+
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
+    const o = obj as Record<string, unknown>;
     const setores = numMapFromUnknown(
       (o[SETORES_KEY] ?? {}) as Record<string, unknown>,
     );
     const contas = numMapFromUnknown(
       (o[CONTAS_KEY] ?? {}) as Record<string, unknown>,
     );
-    out[k] = { setores, contas };
+    out[mesKey] = { setores, contas };
   });
   return out;
 }
