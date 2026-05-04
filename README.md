@@ -218,6 +218,14 @@ If(
 )
 ```
 
+> **Valores voltam a zero após Salvar?** O controlo envia o histórico completo em
+> `historicoOrcamentoJsonOutput`. Se o `Patch` gravar no Dataverse mas **`varHistoricoJson`
+> (input) continuar igual à cópia antiga**, o PCF acaba por reaplicar dados velhos.
+> **Imediatamente após o `Patch`**, faça
+> `Set(varHistoricoJson, Cockpit1.historicoOrcamentoJsonOutput)` **ou**
+> `Refresh(...);` + o mesmo `Set(varHistoricoJson, …)` do `OnStart` (repor o JSON a partir
+> da tabela). Sem isto, o ecrã pode mostrar orçamento a zeros de novo.
+
 > **Como funciona a virada do mês?** Em todo `updateView`, o controlo lê o
 > mês corrente do dispositivo (`new Date().getMonth()`). Se não houver slot
 > para essa competência no histórico, ele cria um vazio e dispara

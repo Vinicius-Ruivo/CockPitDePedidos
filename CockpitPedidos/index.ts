@@ -202,7 +202,10 @@ export class CockpitPedidos
 
     const cacheTemDados = Object.keys(this.historico).length > 0;
     const lastEmitted = this.lastHistoricoEmitted;
-    const withinGraceMs = 8000;
+    /** Evita que o eco antigo do Canvas (varHistoricoJson sem Refresh após Patch) apague o
+     *  orçamento logo após «Salvar». Com ~8s bastava falhar se o utilizador ou o host demorar.
+     */
+    const withinGraceMs = 120_000;
     const dentroDoGrace =
       lastEmitted && Date.now() - lastEmitted.at < withinGraceMs;
 
