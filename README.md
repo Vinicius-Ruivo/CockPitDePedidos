@@ -194,7 +194,10 @@ Set(varLastHistoricoTs, 0);
 > não consegue fazer parse e mostra orçamento vazio. Prefira `Refresh` da
 > tabela e o padrão `ForAll(Sort(...))` em `powerfx/CockpitPedidos-OnStart-varHistoricoJson.txt`.
 > O PCF **1.1.44+** tolera melhor JSON com vírgulas finais e payloads por mês
-> sem chave `setores`/`contas` (mapa plano).
+> sem chave `setores`/`contas` (mapa plano). **1.1.45+:** ao criar o slot vazio
+> do mês em memória, o controlo **não** atualiza `historicoUpdatedTimestamp` —
+> evitava que, após F5 com `varLastHistoricoTs=0`, o primeiro clique num pedido
+> disparasse o `OnChange` e gravasse payload vazio no histórico.
 
 **`OnChange` do controlo (Patch automático).** Dispara em qualquer mudança:
 salvamento manual ou virada de mês detectada pelo controlo.

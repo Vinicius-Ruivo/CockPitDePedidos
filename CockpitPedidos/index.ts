@@ -54,8 +54,8 @@ import {
  * produto: cada novo mês começa do zero). O slot do mês corrente passa a ser
  * a fonte de verdade para os gráficos/UI; meses anteriores ficam congelados
  * no histórico para análise futura. O slot vazio do mês corrente é só em
- * memória até o utilizador gravar com «Salvar orçamentos» — nunca se dispara
- * Patch automático por criar esse slot (evitava apagar dados no Dataverse).
+ * memória até «Salvar orçamentos»; não se atualiza `lastHistoricoEmitted` aqui,
+ * para o timestamp do histórico não enganar o OnChange do Canvas após F5.
  *
  * Nenhum `webAPI.updateRecord` é chamado aqui de propósito: Canvas Apps
  * gerenciam persistência pelo próprio formulário de dados, o que preserva
@@ -145,13 +145,14 @@ export class CockpitPedidos
     }
 
     // 3) Garantir que o slot do mês corrente existe — vira-de-mês automática.
-    //    Nunca persistimos aqui: qualquer `notifyOutputChanged` levava o Canvas a
-    //    Patch com payload vazio (input ainda "{}" / parse vazio / corrida) e
-    //    apagava orçamentos no Dataverse. A 1.ª gravação do mês é só em «Salvar».
+    //    Não chamar `markHistoricoChanged` aqui: mesmo com persistir:false ele
+    //    preenche `lastHistoricoEmitted` e `historicoUpdatedTimestamp`. O próximo
+    //    `notifyOutputChanged` (ex.: clicar num pedido) faz o OnChange do Canvas
+    //    com `varLastHistoricoTs=0` no OnStart e dispara Patch com payload vazio
+    //    do mês civil — corrompe o Dataverse na 2.ª visita / F5.
     const ensured = garantirSlotDoMes(this.historico, this.mesAtual);
     if (ensured.criou) {
       this.historico = ensured.historico;
-      this.markHistoricoChanged({ persistir: false });
     }
 
     // 4) `cachedOrcamentos` (consumido pelo Dashboard) sempre reflete o slot
