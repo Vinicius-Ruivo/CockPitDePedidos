@@ -180,11 +180,11 @@ export class CockpitPedidos
   /**
    * Lê os 3 inputs e decide o que vira "histórico em memória":
    *   - Se há `historicoOrcamentoJson` com pelo menos uma chave válida → essa
-   *     é a fonte de verdade. Os legados são ignorados (o Canvas já fez a
-   *     migração ou a tabela já existe).
-   *   - Caso contrário (primeira instalação / Canvas ainda não wireou o novo
-   *     input) → tratamos os legados como o orçamento do mês corrente,
-   *     preservando o comportamento histórico do controlo.
+   *     é a fonte principal. Os legados **completam só o mês corrente** se
+   *     esse slot ainda não existir no JSON (ex.: Dataverse com meses antigos
+   *     mas sem linha para o mês atual — antes ignorávamos o legado por
+   *     completo e o orçamento sumia após F5).
+   *   - Caso contrário → tratamos os legados como o orçamento do mês corrente.
    * Implementa anti-stale para o eco do Canvas logo após "Salvar".
    */
   private absorverInputs(args: {
@@ -192,6 +192,11 @@ export class CockpitPedidos
     rawLegacyMain: string;
     rawLegacyContas: string;
   }): void {
+    const legacyPayload = buildOrcamentosFromInputs(
+      args.rawLegacyMain,
+      args.rawLegacyContas,
+    );
+
     const parsedHistorico = parseHistoricoOrcamentos(args.rawHistorico);
     const historicoTemDados = Object.keys(parsedHistorico).length > 0;
 
@@ -202,11 +207,16 @@ export class CockpitPedidos
       lastEmitted && Date.now() - lastEmitted.at < withinGraceMs;
 
     if (historicoTemDados) {
-      const incomingCanon = serializeHistoricoOrcamentos(parsedHistorico);
+      const merged = historicoComMesAtualDoLegadoSeAusente(
+        parsedHistorico,
+        this.mesAtual,
+        legacyPayload,
+      );
+      const incomingCanon = serializeHistoricoOrcamentos(merged);
       const staleDivergente =
         dentroDoGrace && lastEmitted!.json !== incomingCanon;
       if (!staleDivergente) {
-        this.historico = parsedHistorico;
+        this.historico = merged;
       }
       return;
     }
@@ -216,10 +226,7 @@ export class CockpitPedidos
     // de grace pós-save, mantemos. Caso contrário, fazemos seed pelo legado.
     if (cacheTemDados && dentroDoGrace) return;
 
-    const seed = buildOrcamentosFromInputs(
-      args.rawLegacyMain,
-      args.rawLegacyContas,
-    );
+    const seed = legacyPayload;
     const seedTemDados =
       Object.keys(seed.setores).length > 0 || Object.keys(seed.contas).length > 0;
     if (seedTemDados) {
@@ -412,6 +419,33 @@ export class CockpitPedidos
 /** Chaves em IPedido (nomes da UI), não nomes Dataverse. */
 const NUMBER_COLUMNS = new Set<keyof IPedidoData>(["valor"]);
 const DATE_COLUMNS = new Set<keyof IPedidoData>(["dataSolicitacao"]);
+
+/**
+ * Quando o Canvas envia histórico com meses antigos mas o **mês corrente**
+ * falta ou veio como objeto vazio na tabela (Patch incompleto / linha criada
+ * pelo slot automático), injeta `orcamentosJson`/`orcamentosContasJson` legados
+ * só para essa competência. Antes, qualquer chave em `historicoOrcamentoJson`
+ * fazia ignorar o legado por completo — ao dar F5 o orçamento editado sumia.
+ */
+function historicoComMesAtualDoLegadoSeAusente(
+  h: IHistoricoOrcamentos,
+  mes: MesISO,
+  legacy: IOrcamentosPayload,
+): IHistoricoOrcamentos {
+  const legacyHasData =
+    Object.keys(legacy.setores).length > 0 ||
+    Object.keys(legacy.contas).length > 0;
+  if (!legacyHasData) return h;
+
+  const slot = h[mes];
+  const slotSemOrcamento =
+    slot === undefined ||
+    (Object.keys(slot.setores).length === 0 &&
+      Object.keys(slot.contas).length === 0);
+
+  if (!slotSemOrcamento) return h;
+  return setSlotDoMes(h, mes, legacy);
+}
 
 function assignPedidoColumn(
   target: IPedido,
