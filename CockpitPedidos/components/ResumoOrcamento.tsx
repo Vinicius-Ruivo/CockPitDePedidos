@@ -21,6 +21,8 @@ export interface IResumoOrcamentoProps {
   totalOrcamento: number;
   totalRealizado: number;
   totalSaldo: number;
+  canEdit?: boolean;
+  readOnlyReason?: string;
   onSaveOrcamentos: (payload: IOrcamentosPayload) => void;
 }
 
@@ -346,6 +348,8 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
   totalOrcamento,
   totalRealizado,
   totalSaldo: _totalSaldo,
+  canEdit = true,
+  readOnlyReason,
   onSaveOrcamentos,
 }) => {
   const [editing, setEditing] = React.useState(false);
@@ -467,7 +471,8 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
     setDraftContas({});
   }, [agregados, draft, draftContas, onSaveOrcamentos, orcamentosPayload.contas]);
 
-  const podeEditar = agregados.length > 0;
+  const temLinhas = agregados.length > 0;
+  const podeEditar = canEdit && temLinhas;
 
   const pieAgregados = React.useMemo<ISubcategoriaAggregate[]>(() => {
     if (!pieSetor) return [];
@@ -527,7 +532,10 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
             </div>
           )}
         </div>
-        {orcamentosVazios && (
+        {!canEdit && readOnlyReason && (
+          <div className="cp-dash-panel-hint">{readOnlyReason}</div>
+        )}
+        {orcamentosVazios && canEdit && (
           <div className="cp-dash-panel-hint">
             Orçamentos ainda vazios: use <strong>Editar</strong> acima
             ou injete <code>orcamentosJson</code> no Canvas. No OnChange de{" "}
@@ -567,7 +575,7 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
       <div className="cp-resumo-divider" />
 
       <div className="cp-resumo-list">
-        {!podeEditar ? (
+        {!temLinhas ? (
           <div className="cp-resumo-empty">
             Nenhum setor cadastrado ainda.
             <br />

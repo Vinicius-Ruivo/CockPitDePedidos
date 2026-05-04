@@ -243,15 +243,16 @@ export class CockpitPedidos
    * Marca o histórico como modificado: atualiza o cache canônico e, se
    * `persistir`, agenda emissão para o Canvas via `notifyOutputChanged`.
    */
-  private markHistoricoChanged(opts: { persistir: boolean }): void {
+  private markHistoricoChanged(opts: { persistir: boolean; mes?: MesISO }): void {
+    const mes = opts.mes ?? this.mesAtual;
     const json = serializeHistoricoOrcamentos(this.historico);
     const payloadDoMes = serializeOrcamentosPayload(
-      orcamentosDoMes(this.historico, this.mesAtual),
+      orcamentosDoMes(this.historico, mes),
     );
     this.lastHistoricoEmitted = {
       json,
       at: Date.now(),
-      mes: this.mesAtual,
+      mes,
       payloadDoMes,
     };
     if (opts.persistir) {
@@ -297,7 +298,7 @@ export class CockpitPedidos
       orcamentosContasJsonOutput: outContas,
       orcamentosUpdatedTimestamp: this.lastOrcamentosSaved?.at,
       historicoOrcamentoJsonOutput: histJson,
-      mesAtualCompetencia: this.mesAtual,
+      mesAtualCompetencia: this.lastHistoricoEmitted?.mes ?? this.mesAtual,
       mesAtualPayloadJson: mesPayload,
       historicoUpdatedTimestamp: this.lastHistoricoEmitted?.at,
     };
@@ -338,9 +339,10 @@ export class CockpitPedidos
   /**
    * Saída 1 = JSON completo (igual a antes) para uma coluna / variável.
    * Saída 2 = só contas, para 2.ª célula ou tabela, sem tocar a fórmula que já existia.
-   * Saída 3 = histórico mensal (novo) — atualiza o slot do mês corrente.
+   * Saída 3 = histórico mensal (novo) — atualiza o slot da competência filtrada.
    */
-  private handleSaveOrcamentos = (payload: IOrcamentosPayload): void => {
+  private handleSaveOrcamentos = (payload: IOrcamentosPayload, mes?: MesISO): void => {
+    const mesDestino = mes ?? this.mesAtual;
     const next: IOrcamentosPayload = {
       setores: { ...payload.setores },
       contas: { ...payload.contas },
@@ -348,9 +350,11 @@ export class CockpitPedidos
     const json = serializeOrcamentosPayload(next);
     const contasOut = serializeNumberMap(next.contas);
 
-    // Atualiza o slot do mês corrente no histórico (cria se não existir).
-    this.historico = setSlotDoMes(this.historico, this.mesAtual, next);
-    this.cachedOrcamentos = next;
+    // Atualiza o slot da competência ativa no filtro do Dashboard.
+    this.historico = setSlotDoMes(this.historico, mesDestino, next);
+    if (mesDestino === this.mesAtual) {
+      this.cachedOrcamentos = next;
+    }
 
     this.lastOrcamentosSaved = { json, at: Date.now(), contasOut };
     // Ainda mantemos a assinatura para retrocompat. Após este save, o Canvas
@@ -359,7 +363,7 @@ export class CockpitPedidos
     this.lastInputSignatureAfterSave = `${json}\n${contasOut}`;
     this.cachedInputSignature = undefined; // força reabsorver no próximo updateView
 
-    this.markHistoricoChanged({ persistir: false });
+    this.markHistoricoChanged({ persistir: false, mes: mesDestino });
     this.notifyOutputChanged();
   };
 

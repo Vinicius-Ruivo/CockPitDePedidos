@@ -22,6 +22,8 @@ export interface IGraficosBarrasProps {
   pedidos: ReadonlyArray<IPedido>;
   /** Histórico mensal (Dataverse) — somado no período selecionado. */
   historicoOrcamentos: IHistoricoOrcamentos;
+  /** Quando o Dashboard está filtrado por um mês, a análise acompanha esse mês. */
+  mesTravado?: MesISO;
 }
 
 interface IMetricOption {
@@ -1350,14 +1352,18 @@ const FornecedorHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
   pedidos,
   historicoOrcamentos,
+  mesTravado,
 }) => {
   const [metric, setMetric] = React.useState<ChartMetric>("orcamento-vs-realizado");
   // Conjunto vazio = "Todos os setores".
   const [setoresFoco, setSetoresFoco] = React.useState<Set<string>>(new Set());
 
   const opcoesMeses = React.useMemo(
-    () => mesesDisponiveisParaGrafico(historicoOrcamentos, pedidos as IPedido[]),
-    [historicoOrcamentos, pedidos],
+    () =>
+      mesTravado
+        ? [mesTravado]
+        : mesesDisponiveisParaGrafico(historicoOrcamentos, pedidos as IPedido[]),
+    [historicoOrcamentos, mesTravado, pedidos],
   );
 
   /** 1.ª sincronização com as opções: intervalo completo (min→max), não só o mês «hoje». */
@@ -1367,6 +1373,12 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
 
   React.useLayoutEffect(() => {
     if (opcoesMeses.length === 0) return;
+    if (mesTravado) {
+      periodoPadraoAplicado.current = true;
+      setMesDe(mesTravado);
+      setMesAte(mesTravado);
+      return;
+    }
     if (!periodoPadraoAplicado.current) {
       periodoPadraoAplicado.current = true;
       setMesDe(opcoesMeses[0]);

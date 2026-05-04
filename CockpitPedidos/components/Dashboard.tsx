@@ -16,7 +16,9 @@ import {
   mesISOAtual,
   mesISODe,
   mesISOLabel,
+  orcamentosDoMes,
   ordenarPedidosPorChegada,
+  somarOrcamentosNoIntervalo,
   totaisGlobais,
 } from "../utils/metrics";
 import { CONTROL_VERSION } from "../constants/controlVersion";
@@ -38,7 +40,7 @@ export interface IDashboardProps {
   onLoadMore: () => void;
   onSelectPedido: (id: string | undefined) => void;
   onSavePedido: (recordId: string, fields: IPedidoData) => void;
-  onSaveOrcamentos: (payload: IOrcamentosPayload) => void;
+  onSaveOrcamentos: (payload: IOrcamentosPayload, mes: MesISO) => void;
 }
 
 type StatusFilter = "todos" | "novo" | "em análise" | "confirmado" | "outros";
@@ -58,6 +60,9 @@ const statusBucket = (s?: string): StatusFilter => {
 };
 
 type MesFiltro = MesISO | "todos";
+
+const payloadTemOrcamento = (payload: IOrcamentosPayload): boolean =>
+  Object.keys(payload.setores).length > 0 || Object.keys(payload.contas).length > 0;
 
 export const Dashboard: React.FC<IDashboardProps> = ({
   pedidos,
@@ -118,6 +123,33 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     return Array.from(s).sort().reverse();
   }, [mesesOpcoesPedidos, filtroMes]);
 
+  const mesesHistorico = React.useMemo(
+    () => Object.keys(historicoOrcamentos).filter(isMesISOValido).sort(),
+    [historicoOrcamentos],
+  );
+
+  const orcamentosDaVista = React.useMemo<IOrcamentosPayload>(() => {
+    if (filtroMes === "todos") {
+      if (mesesHistorico.length === 0) return orcamentos;
+      return somarOrcamentosNoIntervalo(
+        historicoOrcamentos,
+        mesesHistorico[0],
+        mesesHistorico[mesesHistorico.length - 1],
+      );
+    }
+
+    const payloadDoMes = orcamentosDoMes(historicoOrcamentos, filtroMes);
+    if (payloadTemOrcamento(payloadDoMes)) return payloadDoMes;
+
+    // Compatibilidade enquanto o Canvas ainda mantém ConfiguracaoCockpit:
+    // se o histórico não trouxe o mês atual, usa o legado apenas nesse mês.
+    return filtroMes === mesHoje && payloadTemOrcamento(orcamentos)
+      ? orcamentos
+      : payloadDoMes;
+  }, [filtroMes, historicoOrcamentos, mesHoje, mesesHistorico, orcamentos]);
+
+  const mesOrcamentoEditavel: MesISO = filtroMes === "todos" ? mesHoje : filtroMes;
+
   React.useEffect(() => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -165,15 +197,15 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     () =>
       agregarPorSetor(
         pedidosNaVista as IPedido[],
-        orcamentos.setores,
+        orcamentosDaVista.setores,
         SETOR_LABELS_CANONICOS,
       ),
-    [pedidosNaVista, orcamentos],
+    [pedidosNaVista, orcamentosDaVista],
   );
 
   const totais = React.useMemo(
-    () => totaisGlobais(pedidosNaVista as IPedido[], orcamentos.setores),
-    [pedidosNaVista, orcamentos],
+    () => totaisGlobais(pedidosNaVista as IPedido[], orcamentosDaVista.setores),
+    [pedidosNaVista, orcamentosDaVista],
   );
 
   const totalComprometido = totais.realizadoTotal + totais.projetadoTotal;
@@ -491,13 +523,15 @@ export const Dashboard: React.FC<IDashboardProps> = ({
         {/* ---- PAINEL RESUMO (direita, linha 1) ---- */}
         <section className="cp-dash-panel cp-dash-panel-resumo">
           <ResumoOrcamento
-            orcamentosPayload={orcamentos}
+            orcamentosPayload={orcamentosDaVista}
             agregados={agregadosSetor}
             pedidos={pedidosNaVista as IPedido[]}
             totalOrcamento={totais.orcamentoTotal}
             totalRealizado={totais.realizadoTotal}
             totalSaldo={totais.saldoTotal}
-            onSaveOrcamentos={onSaveOrcamentos}
+            canEdit={filtroMes !== "todos"}
+            readOnlyReason="Selecione um mês específico para editar o orçamento daquela competência."
+            onSaveOrcamentos={(payload) => onSaveOrcamentos(payload, mesOrcamentoEditavel)}
           />
         </section>
 
@@ -533,6 +567,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
               <GraficosBarras
                 pedidos={pedidosFiltrados as unknown as IPedido[]}
                 historicoOrcamentos={historicoOrcamentos}
+                mesTravado={filtroMes === "todos" ? undefined : filtroMes}
               />
             </div>
           )}
