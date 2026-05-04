@@ -46,8 +46,22 @@ export interface IDashboardProps {
 type StatusFilter = "todos" | "novo" | "em análise" | "confirmado" | "outros";
 
 const THEME_STORAGE_KEY = "cp-cockpit-theme";
+/** Lembra o mês do filtro «Mês de chegada» após F5 / reabrir o browser. */
+const FILTRO_MES_STORAGE_KEY = "cp-cockpit-filtro-mes";
 
 type ThemeChoice = "dark" | "light";
+
+function readStoredFiltroMes(): MesFiltro {
+  try {
+    const raw = localStorage.getItem(FILTRO_MES_STORAGE_KEY)?.trim();
+    if (!raw) return mesISOAtual();
+    if (raw === "todos") return "todos";
+    if (isMesISOValido(raw)) return raw;
+  } catch {
+    /* ignore */
+  }
+  return mesISOAtual();
+}
 
 /** Retorna o bucket de filtro ao qual um status arbitrário pertence. */
 const statusBucket = (s?: string): StatusFilter => {
@@ -78,7 +92,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
   onSavePedido,
   onSaveOrcamentos,
 }) => {
-  const [filtroMes, setFiltroMes] = React.useState<MesFiltro>(() => mesISOAtual());
+  const [filtroMes, setFiltroMes] = React.useState<MesFiltro>(() => readStoredFiltroMes());
   const [filtroTexto, setFiltroTexto] = React.useState<string>("");
   const [filtroStatus, setFiltroStatus] = React.useState<StatusFilter>("todos");
   const [filtroSetor, setFiltroSetor] = React.useState<string>("todos");
@@ -157,6 +171,14 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       /* ignore */
     }
   }, [theme]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(FILTRO_MES_STORAGE_KEY, filtroMes);
+    } catch {
+      /* ignore */
+    }
+  }, [filtroMes]);
   const drawerPedido = React.useMemo(
     () => (drawerPedidoId ? pedidos.find((p) => p.id === drawerPedidoId) ?? null : null),
     [pedidos, drawerPedidoId],

@@ -228,11 +228,11 @@ If(
 
 > **Como funciona a virada do mês?** Em todo `updateView`, o controlo lê o
 > mês corrente do dispositivo (`new Date().getMonth()`). Se não houver slot
-> para essa competência no histórico, cria um vazio em memória. O `OnChange`
-> do Canvas (Patch) **só é disparado** quando `historicoOrcamentoJson` já veio
-> preenchido — assim não se grava payload vazio na primeira pintura nem ao
-> refrescar com input ainda em branco. A primeira gravação do mês novo continua
-> a ser via «Salvar orçamentos».
+> para essa competência no histórico, cria um vazio **só em memória** — não
+> dispara Patch automático (evita gravar `{}` no Dataverse). A primeira linha
+> do mês novo no histórico é criada quando alguém grava com «Salvar orçamentos».
+> O filtro «Mês de chegada» no PCF passa a ser **lembrado no browser** (localStorage)
+> após F5, para não parecer que o orçamento «sumiu» ao estar noutro mês.
 
 > **Linhas criadas ou alteradas no Dataverse (maker) e não aparecem no período?**
 > A variável `varHistoricoJson` costuma ser montada só no **`OnStart`**. Depois
