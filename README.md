@@ -188,6 +188,14 @@ Set(varHistoricoJson,
 Set(varLastHistoricoTs, 0);
 ```
 
+> **Após F5 tudo a zero mas na tabela há dados?** Abra o **Monitor** e veja o
+> comprimento de `varHistoricoJson` logo após o `OnStart`. Se for curto ou o
+> `JSON` estiver inválido (vírgula a mais no `Concat`, coluna errada), o PCF
+> não consegue fazer parse e mostra orçamento vazio. Prefira `Refresh` da
+> tabela e o padrão `ForAll(Sort(...))` em `powerfx/CockpitPedidos-OnStart-varHistoricoJson.txt`.
+> O PCF **1.1.44+** tolera melhor JSON com vírgulas finais e payloads por mês
+> sem chave `setores`/`contas` (mapa plano).
+
 **`OnChange` do controlo (Patch automático).** Dispara em qualquer mudança:
 salvamento manual ou virada de mês detectada pelo controlo.
 

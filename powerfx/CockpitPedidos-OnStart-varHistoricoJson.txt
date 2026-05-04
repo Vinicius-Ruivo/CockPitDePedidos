@@ -1,0 +1,15 @@
+Refresh( 'Histórico de Orçamento' );;
+Set(
+    varHistoricoJson;
+    "{" &
+    Concat(
+        ForAll(
+            Sort( 'Histórico de Orçamento'; Competencia ) As R;
+            """" & R.Competencia & """:" & R.PayloadJson
+        );
+        Value;
+        ","
+    ) &
+    "}"
+);;
+Set( varLastHistoricoTs; 0 )

@@ -707,11 +707,64 @@ export function mesISOLabel(mes: MesISO): string {
   return `${NOMES[m - 1]}/${String(y).slice(2)}`;
 }
 
+/** Parse de objeto JSON com tolerância a vírgulas finais (ex.: Power Fx mal concatenado). */
+function tryParseJsonHistoricoRoot(raw: string): Record<string, unknown> | null {
+  let s = raw.trim();
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+  try {
+    const parsed = JSON.parse(s) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    try {
+      const fixed = s.replace(/,\s*([}\]])/g, "$1");
+      const parsed = JSON.parse(fixed) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
+ * Interpreta o payload de um mês: `{ setores, contas }`, chaves só com capitalização
+ * diferente, ou mapa plano de setores (legado / gravações externas).
+ */
+function payloadFromHistoricoMonthObj(o: Record<string, unknown>): IOrcamentosPayload {
+  const keyCI = (want: string): string | undefined =>
+    Object.keys(o).find((k) => k.toLowerCase() === want);
+
+  const sk = keyCI(SETORES_KEY);
+  const ck = keyCI(CONTAS_KEY);
+
+  if (sk !== undefined || ck !== undefined) {
+    const sRaw = sk !== undefined ? o[sk] : {};
+    const cRaw = ck !== undefined ? o[ck] : {};
+    const setoresObj =
+      typeof sRaw === "object" && sRaw !== null && !Array.isArray(sRaw)
+        ? (sRaw as Record<string, unknown>)
+        : {};
+    const contasObj =
+      typeof cRaw === "object" && cRaw !== null && !Array.isArray(cRaw)
+        ? (cRaw as Record<string, unknown>)
+        : {};
+    return {
+      setores: numMapFromUnknown(setoresObj),
+      contas: numMapFromUnknown(contasObj),
+    };
+  }
+
+  return parseOrcamentosPayload(JSON.stringify(o));
+}
+
 /**
  * Faz parse do JSON do histórico. Aceita:
  * - `{ "2026-04": { "setores": {...}, "contas": {...} }, "2026-05": { ... } }` (canônico)
  * - Valores por mês podem vir como objeto ou como **string JSON** (coluna texto).
  * - Chaves `YYYY-M` são normalizadas para `YYYY-MM`.
+ * - Vírgulas finais inválidas no JSON global ou no payload por mês (tentativa de correção).
+ * - Payload por mês **sem** chaves `setores`/`contas` → tratado como mapa plano de setores.
  */
 export function parseHistoricoOrcamentos(
   raw?: string | null,
@@ -720,41 +773,23 @@ export function parseHistoricoOrcamentos(
   let s = raw.trim();
   if (!s) return {};
   if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(s);
-  } catch {
-    return {};
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  const parsedRoot = tryParseJsonHistoricoRoot(s);
+  if (!parsedRoot) return {};
   const out: Record<MesISO, IOrcamentosPayload> = {};
-  Object.entries(parsed as Record<string, unknown>).forEach(([k, v]) => {
+  Object.entries(parsedRoot).forEach(([k, v]) => {
     const mesKey = normalizarChaveCompetenciaMesISO(k);
     if (!mesKey) return;
 
     let obj: unknown = v;
     if (typeof v === "string") {
-      try {
-        const inner = JSON.parse(v.trim());
-        if (inner && typeof inner === "object" && !Array.isArray(inner)) {
-          obj = inner;
-        } else {
-          return;
-        }
-      } catch {
-        return;
-      }
+      const inner = tryParseJsonHistoricoRoot(v);
+      if (!inner) return;
+      obj = inner;
     }
 
     if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
     const o = obj as Record<string, unknown>;
-    const setores = numMapFromUnknown(
-      (o[SETORES_KEY] ?? {}) as Record<string, unknown>,
-    );
-    const contas = numMapFromUnknown(
-      (o[CONTAS_KEY] ?? {}) as Record<string, unknown>,
-    );
-    out[mesKey] = { setores, contas };
+    out[mesKey] = payloadFromHistoricoMonthObj(o);
   });
   return out;
 }
