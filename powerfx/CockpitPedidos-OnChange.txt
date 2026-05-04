@@ -1,0 +1,80 @@
+If(
+    !IsBlank( CockpitPedidos1.lastEditedJson );
+    Set( gEdit; ParseJSON( CockpitPedidos1.lastEditedJson ) );;
+    Patch(
+        PEDIDOS;
+        LookUp( PEDIDOS; PEDIDOS = GUID( Text( gEdit.id ) ) );
+        {
+            STATUS:              Text( gEdit.fields.status );
+            DATASOLICITACAO:     DateTimeValue( Text( gEdit.fields.dataSolicitacao ) );
+            FORNECEDOR:          Text( gEdit.fields.fornecedor );
+            CONTACONTABIL:       Text( gEdit.fields.contaContabil );
+            DESPESA:             Text( gEdit.fields.despesa );
+            QUANTIDADE:          Text( gEdit.fields.quantidade );
+            RESPONSAVEL:         Text( gEdit.fields.responsavel );
+            NATUREZA:            Text( gEdit.fields.natureza );
+            SETOR:               Text( gEdit.fields.setor );
+            CNPJ:                Text( gEdit.fields.cnpj );
+            NUMERODECHAMADO:     Text( gEdit.fields.numeroChamado );
+            VALOR:               Value( gEdit.fields.valor );
+            CENTRODECUSTO:       Text( gEdit.fields.centroCusto );
+            NUMERODEREQUISICAO:  Text( gEdit.fields.numeroRequisicao );
+            ORDEMDECOMPRA:       Text( gEdit.fields.ordemCompra );
+            NUMERODANOTA:        Text( gEdit.fields.numeroNota );
+            NUMERODOORCAMENTO:   Text( gEdit.fields.numeroOrcamento );
+            VENCIMENTO:          If( IsBlank( gEdit.fields.vencimento ); Blank(); DateValue( Text( gEdit.fields.vencimento ) ) )
+        }
+    );;
+    Refresh( PEDIDOS );;
+    UpdateContext({ varAtualizaTela: Now() })
+);;
+
+If(
+    !IsBlank( CockpitPedidos1.orcamentosJsonOutput ) &&
+    !IsBlank( CockpitPedidos1.orcamentosUpdatedTimestamp ) &&
+    Coalesce( CockpitPedidos1.orcamentosUpdatedTimestamp; 0 ) > varLastOrcTimestamp;
+    Set( varOrcamentosJSON; CockpitPedidos1.orcamentosJsonOutput );;
+    Patch(
+        'Configuração Cockpit';
+        LookUp( 'Configuração Cockpit'; Nome = "Default" );
+        { 'Orçamentos JSON': varOrcamentosJSON }
+    );;
+    Set( varLastOrcTimestamp; CockpitPedidos1.orcamentosUpdatedTimestamp )
+);;
+
+If(
+    Coalesce( CockpitPedidos1.historicoUpdatedTimestamp; 0 ) > varLastHistoricoTs;
+    With(
+        {
+            mes: CockpitPedidos1.mesAtualCompetencia;
+            payload: CockpitPedidos1.mesAtualPayloadJson
+        };
+        If(
+            !IsBlank( mes ) && !IsBlank( payload );
+            Patch(
+                'Histórico de Orçamento';
+                Coalesce(
+                    LookUp( 'Histórico de Orçamento'; Competencia = mes );
+                    Defaults( 'Histórico de Orçamento' )
+                );
+                {
+                    Competencia: mes;
+                    PayloadJson: payload
+                }
+            )
+        );;
+        Set( varHistoricoJson; CockpitPedidos1.historicoOrcamentoJsonOutput );;
+        Refresh( 'Histórico de Orçamento' );;
+        Set(
+            varHistoricoJson;
+            "{" &
+            Concat(
+                'Histórico de Orçamento';
+                """" & Competencia & """:" & PayloadJson;
+                ","
+            ) &
+            "}"
+        );;
+        Set( varLastHistoricoTs; CockpitPedidos1.historicoUpdatedTimestamp )
+    )
+)
