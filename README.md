@@ -228,11 +228,11 @@ If(
 
 > **Como funciona a virada do mês?** Em todo `updateView`, o controlo lê o
 > mês corrente do dispositivo (`new Date().getMonth()`). Se não houver slot
-> para essa competência no histórico, ele cria um vazio e dispara
-> `historicoUpdatedTimestamp` — o `OnChange` acima persiste a nova linha em
-> `cr660_orcamentohistorico`. A partir daí, qualquer edição via «Salvar
-> orçamentos» grava na linha do mês corrente; os meses anteriores ficam
-> intactos.
+> para essa competência no histórico, cria um vazio em memória. O `OnChange`
+> do Canvas (Patch) **só é disparado** quando `historicoOrcamentoJson` já veio
+> preenchido — assim não se grava payload vazio na primeira pintura nem ao
+> refrescar com input ainda em branco. A primeira gravação do mês novo continua
+> a ser via «Salvar orçamentos».
 
 > **Linhas criadas ou alteradas no Dataverse (maker) e não aparecem no período?**
 > A variável `varHistoricoJson` costuma ser montada só no **`OnStart`**. Depois
