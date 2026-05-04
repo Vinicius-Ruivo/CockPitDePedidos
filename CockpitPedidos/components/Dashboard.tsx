@@ -1,7 +1,7 @@
 import * as React from "react";
 import "../Dashboard.css";
 import "../PedidoForm.css";
-import { IHistoricoOrcamentos, IOrcamentosPayload, IPedido, IPedidoData } from "../types";
+import { IHistoricoOrcamentos, IOrcamentosPayload, IPedido, IPedidoData, MesISO } from "../types";
 import {
   SETOR_LABELS_CANONICOS,
   SUBCATEGORIAS_TODAS,
@@ -12,6 +12,10 @@ import {
 import {
   agregarPorSetor,
   distinctSetores,
+  isMesISOValido,
+  mesISOAtual,
+  mesISODe,
+  mesISOLabel,
   ordenarPedidosPorChegada,
   totaisGlobais,
 } from "../utils/metrics";
@@ -53,6 +57,8 @@ const statusBucket = (s?: string): StatusFilter => {
   return "outros";
 };
 
+type MesFiltro = MesISO | "todos";
+
 export const Dashboard: React.FC<IDashboardProps> = ({
   pedidos,
   orcamentos,
@@ -67,6 +73,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
   onSavePedido,
   onSaveOrcamentos,
 }) => {
+  const [filtroMes, setFiltroMes] = React.useState<MesFiltro>(() => mesISOAtual());
   const [filtroTexto, setFiltroTexto] = React.useState<string>("");
   const [filtroStatus, setFiltroStatus] = React.useState<StatusFilter>("todos");
   const [filtroSetor, setFiltroSetor] = React.useState<string>("todos");
@@ -81,6 +88,35 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     }
   });
   const [drawerPedidoId, setDrawerPedidoId] = React.useState<string | undefined>(undefined);
+
+  const mesHoje = mesISOAtual();
+
+  /** Pedidos cuja data de solicitação cai no mês escolhido (ou todos). */
+  const pedidosNaVista = React.useMemo(() => {
+    if (filtroMes === "todos") return pedidos as IPedido[];
+    return (pedidos as IPedido[]).filter((p) => {
+      const m = mesISODe(p.dataSolicitacao);
+      return m === filtroMes;
+    });
+  }, [pedidos, filtroMes]);
+
+  /** Meses que existem nos dados + mês atual (para o select). */
+  const mesesOpcoesPedidos = React.useMemo(() => {
+    const s = new Set<MesISO>();
+    (pedidos as IPedido[]).forEach((p) => {
+      const m = mesISODe(p.dataSolicitacao);
+      if (m && isMesISOValido(m)) s.add(m);
+    });
+    s.add(mesISOAtual());
+    return Array.from(s).sort().reverse();
+  }, [pedidos]);
+
+  /** Inclui o mês selecionado nas opções mesmo se ainda não houver pedidos nesse mês no dataset. */
+  const mesesParaSelect = React.useMemo(() => {
+    const s = new Set<MesISO>(mesesOpcoesPedidos);
+    if (filtroMes !== "todos" && isMesISOValido(filtroMes)) s.add(filtroMes);
+    return Array.from(s).sort().reverse();
+  }, [mesesOpcoesPedidos, filtroMes]);
 
   React.useEffect(() => {
     try {
@@ -97,8 +133,8 @@ export const Dashboard: React.FC<IDashboardProps> = ({
   // --------------------- Derivados (memoizados) ---------------------
 
   const setoresConhecidos = React.useMemo(
-    () => mergeSetoresComCatalogo(distinctSetores(pedidos as IPedido[])),
-    [pedidos],
+    () => mergeSetoresComCatalogo(distinctSetores(pedidosNaVista as IPedido[])),
+    [pedidosNaVista],
   );
 
   // Opções canônicas para o filtro de Setor (aglutinador).
@@ -128,23 +164,23 @@ export const Dashboard: React.FC<IDashboardProps> = ({
   const agregadosSetor = React.useMemo(
     () =>
       agregarPorSetor(
-        pedidos as IPedido[],
+        pedidosNaVista as IPedido[],
         orcamentos.setores,
         SETOR_LABELS_CANONICOS,
       ),
-    [pedidos, orcamentos],
+    [pedidosNaVista, orcamentos],
   );
 
   const totais = React.useMemo(
-    () => totaisGlobais(pedidos as IPedido[], orcamentos.setores),
-    [pedidos, orcamentos],
+    () => totaisGlobais(pedidosNaVista as IPedido[], orcamentos.setores),
+    [pedidosNaVista, orcamentos],
   );
 
   const totalComprometido = totais.realizadoTotal + totais.projetadoTotal;
 
   const pedidosFiltrados = React.useMemo(() => {
     const q = filtroTexto.trim().toLowerCase();
-    const filtrados = pedidos.filter((p) => {
+    const filtrados = pedidosNaVista.filter((p) => {
       if (filtroStatus !== "todos" && statusBucket(p.status) !== filtroStatus) {
         return false;
       }
@@ -173,26 +209,26 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       return haystack.includes(q);
     });
     return ordenarPedidosPorChegada(filtrados);
-  }, [pedidos, filtroTexto, filtroStatus, filtroSetor, filtroSubcategoria]);
+  }, [pedidosNaVista, filtroTexto, filtroStatus, filtroSetor, filtroSubcategoria]);
 
   // Counts para as "chips" de filtro
   const counts = React.useMemo(() => {
-    const c = { todos: pedidos.length, novo: 0, "em análise": 0, confirmado: 0, outros: 0 };
-    pedidos.forEach((p) => {
+    const c = { todos: pedidosNaVista.length, novo: 0, "em análise": 0, confirmado: 0, outros: 0 };
+    pedidosNaVista.forEach((p) => {
       c[statusBucket(p.status)] += 1;
     });
     return c;
-  }, [pedidos]);
+  }, [pedidosNaVista]);
 
   // --------------------- Handlers ---------------------
 
   const openDrawer = React.useCallback(
     (id: string) => {
-      if (!pedidos.find((x) => x.id === id)) return;
+      if (!pedidosNaVista.find((x) => x.id === id)) return;
       setDrawerPedidoId(id);
       onSelectPedido(id);
     },
-    [pedidos, onSelectPedido],
+    [pedidosNaVista, onSelectPedido],
   );
 
   const closeDrawer = React.useCallback(() => {
@@ -345,8 +381,29 @@ export const Dashboard: React.FC<IDashboardProps> = ({
           <div
             className="cp-dash-agg-filters"
             role="group"
-            aria-label="Filtrar por setor e subcategoria"
+            aria-label="Filtrar por mês de chegada, setor e subcategoria"
           >
+            <label className="cp-dash-agg-filter">
+              <span className="cp-dash-agg-filter-label">Mês de chegada</span>
+              <select
+                className="cp-dash-agg-select"
+                value={filtroMes}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFiltroMes(v === "todos" ? "todos" : (v as MesISO));
+                }}
+                aria-label="Mês da data de solicitação do pedido"
+                title="Só entram pedidos cuja data de solicitação está neste mês (calendário local)"
+              >
+                {mesesParaSelect.map((m) => (
+                  <option key={m} value={m}>
+                    {mesISOLabel(m)}
+                    {m === mesHoje ? " · mês atual" : ""}
+                  </option>
+                ))}
+                <option value="todos">Todos os meses</option>
+              </select>
+            </label>
             <label className="cp-dash-agg-filter">
               <span className="cp-dash-agg-filter-label">Setor</span>
               <select
@@ -388,7 +445,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
                 }}
                 aria-label="Limpar filtros de setor e subcategoria"
               >
-                Limpar
+                Limpar setor
               </button>
             )}
           </div>
@@ -402,7 +459,8 @@ export const Dashboard: React.FC<IDashboardProps> = ({
                   !!filtroTexto ||
                   filtroStatus !== "todos" ||
                   filtroSetor !== "todos" ||
-                  filtroSubcategoria !== "todas"
+                  filtroSubcategoria !== "todas" ||
+                  filtroMes !== "todos"
                 }
               />
             ) : (
@@ -435,7 +493,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
           <ResumoOrcamento
             orcamentosPayload={orcamentos}
             agregados={agregadosSetor}
-            pedidos={pedidos}
+            pedidos={pedidosNaVista as IPedido[]}
             totalOrcamento={totais.orcamentoTotal}
             totalRealizado={totais.realizadoTotal}
             totalSaldo={totais.saldoTotal}
@@ -553,7 +611,7 @@ const EmptyState: React.FC<{ hasFilter: boolean }> = ({ hasFilter }) => (
     {hasFilter ? (
       <>
         <div>Nenhum pedido encontrado com os filtros atuais.</div>
-        <small>Tente limpar a busca ou trocar o status.</small>
+        <small>Tente limpar a busca, o mês de chegada ou o status.</small>
       </>
     ) : (
       <>
