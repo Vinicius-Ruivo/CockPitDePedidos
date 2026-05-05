@@ -8,6 +8,7 @@ import {
 } from "../types";
 import {
   agregarPorSubcategoria,
+  parseOrcamentoValor,
   serializeOrcamentosPayload,
 } from "../utils/metrics";
 import { getSubcategoriasParaSetor, setorLabelExibicao } from "../constants/setoresOrganizacao";
@@ -453,17 +454,21 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
   const saveEditing = React.useCallback(() => {
     const setores: OrcamentosMap = {};
     agregados.forEach((a) => {
-      const v = draft[a.setor] ?? a.orcamento;
-      setores[a.setor] = Number.isFinite(v) ? Math.max(0, v) : 0;
+      const raw = draft[a.setor] ?? a.orcamento;
+      const n = parseOrcamentoValor(raw);
+      setores[a.setor] =
+        n !== undefined && n >= 0 ? Math.max(0, n) : 0;
     });
-    const merged: Record<string, number> = {
+    const merged: Record<string, number | string> = {
       ...orcamentosPayload.contas,
       ...draftContas,
     };
     const contas: Record<string, number> = {};
     Object.keys(merged).forEach((k) => {
-      const v = merged[k];
-      if (Number.isFinite(v) && (v as number) >= 0) contas[k] = v as number;
+      // Não usar Number.isFinite(v) em bruto: valores vindos do JSON/Dataverse
+      // podem ser string ("12345") e seriam descartados — contas não gravavam.
+      const n = parseOrcamentoValor(merged[k]);
+      if (n !== undefined && n >= 0) contas[k] = n;
     });
     onSaveOrcamentos({ setores, contas });
     setEditing(false);

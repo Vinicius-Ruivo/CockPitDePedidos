@@ -514,7 +514,7 @@ export function serializeOrcamentosPayload(p: IOrcamentosPayload): string {
 }
 
 /** Converte valor JSON (número ou string numérica pt-BR/US) para número finito. */
-function parseOrcamentoValor(v: unknown): number | undefined {
+export function parseOrcamentoValor(v: unknown): number | undefined {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
     const t = v.trim().replace(/\s/g, "");
