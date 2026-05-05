@@ -2,7 +2,7 @@
 
 Este ficheiro é o **ponto de partida** para futuros updates: descreve o que estava a funcionar no repositório (PCF) e o que deve existir na **Canvas App** (Power Fx, ligações). Ao mudar algo, compara com isto para ver o que divergiu.
 
-**Versão PCF publicada (base):** `1.1.46` — alinhar sempre `CockpitPedidos/ControlManifest.Input.xml` (`<control version="…">`) e `CockpitPedidos/constants/controlVersion.ts`.
+**Versão PCF publicada (base):** `1.1.47` — alinhar sempre `CockpitPedidos/ControlManifest.Input.xml` (`<control version="…">`) e `CockpitPedidos/constants/controlVersion.ts`.
 
 **Cópia “fonte” dos fragmentos Canvas:** pasta `powerfx/` na raiz do repo (ficheiros `.txt` em Power Fx). Se alterares a app, atualiza também esses ficheiros para o Git refletir a verdade.
 
@@ -182,6 +182,7 @@ Documentação extra: `README.md` (Dataverse, bindings, troubleshooting).
 | 1.1.44 | Parse de histórico mais robusto; guia OnStart com `ForAll` |
 | **1.1.45** | **Não** atualizar `lastHistoricoEmitted` ao criar slot vazio — evita Patch fantasma ao clicar num pedido com `varLastHistoricoTs = 0` após F5 |
 | **1.1.46** | **Salvar orçamento (contas):** no `ResumoOrcamento`, deixou de usar `Number.isFinite` em brutos nos valores de `contas` — strings vindas do JSON (Dataverse) eram descartadas e as contas contábeis não persistiam. |
+| **1.1.47** | **Contas contábeis:** `draftContasRef` no salvar (último estado síncrono); `serializeOrcamentosPayload` normaliza números; `agregarPorSubcategoria` lê orçamento de conta com `parseOrcamentoValor` (strings após F5); `handleSaveOrcamentos` tolera `contas` indefinido. |
 
 ---
 
@@ -193,4 +194,4 @@ Documentação extra: `README.md` (Dataverse, bindings, troubleshooting).
 
 ---
 
-*Última alinhamento com o repo: versão PCF `1.1.46` e conteúdos em `powerfx/` iguais aos blocos acima.*
+*Última alinhamento com o repo: versão PCF `1.1.47` e conteúdos em `powerfx/` iguais aos blocos acima.*

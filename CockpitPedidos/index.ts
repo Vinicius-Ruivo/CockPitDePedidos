@@ -348,7 +348,7 @@ export class CockpitPedidos
     const mesDestino = mes ?? this.mesAtual;
     const next: IOrcamentosPayload = {
       setores: { ...payload.setores },
-      contas: { ...payload.contas },
+      contas: { ...(payload.contas ?? {}) },
     };
     const json = serializeOrcamentosPayload(next);
     const contasOut = serializeNumberMap(next.contas);

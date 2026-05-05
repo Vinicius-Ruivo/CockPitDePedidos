@@ -296,14 +296,17 @@ export function agregarPorSubcategoria(
   grupos.forEach((pedidosDaConta, subcategoria) => {
     const realizado = sumValorRealizado(pedidosDaConta);
     const projetado = sumValorProjetado(pedidosDaConta);
-    const orcConta = orcamentosConta[subcategoria] ?? 0;
+    const rawOrc = orcamentosConta[subcategoria];
+    const orcParsed = parseOrcamentoValor(rawOrc as unknown);
+    const orcConta =
+      orcParsed !== undefined ? Math.max(0, orcParsed) : 0;
     result.push({
       subcategoria,
       realizado,
       projetado,
       total: realizado + projetado,
       quantidadePedidos: pedidosDaConta.length,
-      orcamento: Number.isFinite(orcConta) ? Math.max(0, orcConta) : 0,
+      orcamento: orcConta,
     });
   });
 
@@ -496,19 +499,21 @@ export function serializeOrcamentosJson(map: OrcamentosMap): string {
   return serializeOrcamentosPayload({ setores: map, contas: {} });
 }
 
-/** Formato canônico na saída: `setores` + `contas`. */
+/** Formato canônico na saída: `setores` + `contas` (sempre números no JSON). */
 export function serializeOrcamentosPayload(p: IOrcamentosPayload): string {
   const setores: Record<string, number> = {};
   Object.keys(p.setores)
     .sort((a, b) => a.localeCompare(b, "pt-BR"))
     .forEach((k) => {
-      setores[k] = p.setores[k];
+      const n = parseOrcamentoValor(p.setores[k]);
+      if (n !== undefined && n >= 0) setores[k] = n;
     });
   const contas: Record<string, number> = {};
   Object.keys(p.contas)
     .sort((a, b) => a.localeCompare(b, "pt-BR"))
     .forEach((k) => {
-      contas[k] = p.contas[k];
+      const n = parseOrcamentoValor(p.contas[k]);
+      if (n !== undefined && n >= 0) contas[k] = n;
     });
   return JSON.stringify({ setores, contas });
 }

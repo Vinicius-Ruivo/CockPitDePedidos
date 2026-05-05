@@ -356,6 +356,8 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState<Record<string, number>>({});
   const [draftContas, setDraftContas] = React.useState<Record<string, number>>({});
+  /** Sincronizado em cada mutação — o estado React pode atrasar 1 frame no «Salvar». */
+  const draftContasRef = React.useRef<Record<string, number>>({});
   const [expandedSetor, setExpandedSetor] = React.useState<string | null>(null);
   const [pieSetor, setPieSetor] = React.useState<string | null>(null);
 
@@ -387,7 +389,9 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
         : a.orcamento;
     });
     setDraft(d);
-    setDraftContas({ ...op.contas });
+    const contasIn = { ...(op.contas ?? {}) };
+    draftContasRef.current = contasIn;
+    setDraftContas(contasIn);
   }, [payloadSig, editing]);
 
   /** Novos setores sem mudança no JSON gravado. */
@@ -441,13 +445,16 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
       d[a.setor] = a.orcamento;
     });
     setDraft(d);
-    setDraftContas({ ...orcamentosPayload.contas });
+    const dc = { ...(orcamentosPayload.contas ?? {}) };
+    draftContasRef.current = dc;
+    setDraftContas(dc);
     setEditing(true);
   }, [agregados, orcamentosPayload.contas]);
 
   const cancelEditing = React.useCallback(() => {
     setEditing(false);
     setDraft({});
+    draftContasRef.current = {};
     setDraftContas({});
   }, []);
 
@@ -460,21 +467,20 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
         n !== undefined && n >= 0 ? Math.max(0, n) : 0;
     });
     const merged: Record<string, number | string> = {
-      ...orcamentosPayload.contas,
-      ...draftContas,
+      ...(orcamentosPayload.contas ?? {}),
+      ...draftContasRef.current,
     };
     const contas: Record<string, number> = {};
     Object.keys(merged).forEach((k) => {
-      // Não usar Number.isFinite(v) em bruto: valores vindos do JSON/Dataverse
-      // podem ser string ("12345") e seriam descartados — contas não gravavam.
       const n = parseOrcamentoValor(merged[k]);
       if (n !== undefined && n >= 0) contas[k] = n;
     });
     onSaveOrcamentos({ setores, contas });
     setEditing(false);
     setDraft({});
+    draftContasRef.current = {};
     setDraftContas({});
-  }, [agregados, draft, draftContas, onSaveOrcamentos, orcamentosPayload.contas]);
+  }, [agregados, draft, onSaveOrcamentos, orcamentosPayload.contas]);
 
   const temLinhas = agregados.length > 0;
   const podeEditar = canEdit && temLinhas;
@@ -603,7 +609,11 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
               }
               contasMerged={contasMerged}
               onContaChange={(conta, n) =>
-                setDraftContas((prev) => ({ ...prev, [conta]: n }))
+                setDraftContas((prev) => {
+                  const next = { ...prev, [conta]: n };
+                  draftContasRef.current = next;
+                  return next;
+                })
               }
               pedidos={pedidos}
               expandido={expandedSetor === agg.setor}
