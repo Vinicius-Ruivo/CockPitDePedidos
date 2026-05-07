@@ -303,6 +303,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       "NUMERO DE REQUISICAO",
       "N° NOTA",
       "CONTA CONTABIL",
+      "DESPESA",
     ];
     const rows = pedidosFiltrados.map((p) => [
       p.marca ?? "",
@@ -315,6 +316,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       p.numeroRequisicao ?? "",
       p.numeroNota ?? "",
       p.contaContabil ?? "",
+      p.despesa ?? "",
     ]);
     const aoa = [headers, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
