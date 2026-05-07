@@ -325,10 +325,13 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       }, 0);
       return { wch: Math.min(60, Math.max(12, maxLen + 2)) };
     });
-    // Mantém a geração em formato "planilha" e converte para CSV só no download.
-    const csvBody = XLSX.utils.sheet_to_csv(ws, { FS: ";", RS: "\r\n" });
-    const csv = `\uFEFF${csvBody}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
+    const xlsxBuffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    // Pedido do utilizador: conteúdo .xlsx, mas nome final do download como .csv.
+    const blob = new Blob([xlsxBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     const mesTag = filtroMes === "todos" ? "todos-meses" : filtroMes;
