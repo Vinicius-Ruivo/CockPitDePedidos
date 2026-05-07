@@ -1,21 +1,21 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <manifest>
   <control namespace="CockpitPedidos"
            constructor="CockpitPedidos"
-           version="1.1.47"
+           version="1.1.48"
            display-name-key="CockpitPedidos_DisplayName"
            description-key="CockpitPedidos_Description"
            control-type="virtual">
 
     <!--
-      DATASET — nomes dos property-set = nomes lógicos Dataverse (cr660_*).
-      No Canvas: Items = PEDIDOS; Campos → incluir colunas — associação automática por nome.
+      DATASET â€” nomes dos property-set = nomes lÃ³gicos Dataverse (cr660_*).
+      No Canvas: Items = PEDIDOS; Campos â†’ incluir colunas â€” associaÃ§Ã£o automÃ¡tica por nome.
     -->
     <data-set name="pedidos"
               display-name-key="Pedidos_DisplayName"
               description-key="Pedidos_Description">
 
-      <!-- ====== Campos = nomes lógicos Dataverse (cr660_...) ====== -->
+      <!-- ====== Campos = nomes lÃ³gicos Dataverse (cr660_...) ====== -->
       <property-set name="cr660_titulodopedido"
                     display-name-key="TituloPedido_DisplayName"
                     description-key="TituloPedido_Description"
@@ -173,13 +173,13 @@
 
     <!--
       =========================================================
-      PROPRIEDADES AUXILIARES (não fazem parte do dataset)
+      PROPRIEDADES AUXILIARES (nÃ£o fazem parte do dataset)
       =========================================================
     -->
 
-    <!-- INPUT: mapa de orçamentos por setor.
+    <!-- INPUT: mapa de orÃ§amentos por setor.
          O Canvas App injeta como JSON (ex: '{"TI":50000,"Marketing":30000}').
-         Se vazio, o dashboard mostra "sem orçamento definido". -->
+         Se vazio, o dashboard mostra "sem orÃ§amento definido". -->
     <property name="orcamentosJson"
               display-name-key="OrcamentosJson_DisplayName"
               description-key="OrcamentosJson_Description"
@@ -187,8 +187,8 @@
               usage="input"
               required="false" />
 
-    <!-- INPUT: JSON só das contas (2ª coluna/linha no Canvas). Se vazio, tudo
-         vem de orcamentosJson. Mapa: "código - nome da conta" → R$. -->
+    <!-- INPUT: JSON sÃ³ das contas (2Âª coluna/linha no Canvas). Se vazio, tudo
+         vem de orcamentosJson. Mapa: "cÃ³digo - nome da conta" â†’ R$. -->
     <property name="orcamentosContasJson"
               display-name-key="OrcamentosContasJson_DisplayName"
               description-key="OrcamentosContasJson_Description"
@@ -196,7 +196,7 @@
               usage="input"
               required="false" />
 
-    <!-- OUTPUT: JSON completo { setores, contas } (compat. com apps que usam 1 célula). -->
+    <!-- OUTPUT: JSON completo { setores, contas } (compat. com apps que usam 1 cÃ©lula). -->
     <property name="orcamentosJsonOutput"
               display-name-key="OrcamentosJsonOutput_DisplayName"
               description-key="OrcamentosJsonOutput_Description"
@@ -204,7 +204,7 @@
               usage="output"
               required="false" />
 
-    <!-- OUTPUT: só o mapa de contas (2.ª célula/coluna no Dataverse, opcional). -->
+    <!-- OUTPUT: sÃ³ o mapa de contas (2.Âª cÃ©lula/coluna no Dataverse, opcional). -->
     <property name="orcamentosContasJsonOutput"
               display-name-key="OrcamentosContasJsonOutput_DisplayName"
               description-key="OrcamentosContasJsonOutput_Description"
@@ -219,11 +219,11 @@
               usage="output"
               required="false" />
 
-    <!-- INPUT: histórico mensal completo, JSON
+    <!-- INPUT: histÃ³rico mensal completo, JSON
          { "YYYY-MM": { "setores": {...}, "contas": {...} } , ... }.
          O Canvas materializa as linhas da tabela cr660_orcamentohistorico
          neste JSON e injeta. Se vazio, o controlo recorre aos legados
-         orcamentosJson/orcamentosContasJson como seed do mês corrente. -->
+         orcamentosJson/orcamentosContasJson como seed do mÃªs corrente. -->
     <property name="historicoOrcamentoJson"
               display-name-key="HistoricoOrcamentoJson_DisplayName"
               description-key="HistoricoOrcamentoJson_Description"
@@ -231,9 +231,9 @@
               usage="input"
               required="false" />
 
-    <!-- OUTPUT: histórico mensal completo após qualquer mudança (save manual
-         ou virada de mês detectada automaticamente). Útil se o Canvas
-         preferir guardar tudo numa única célula em vez de tabela. -->
+    <!-- OUTPUT: histÃ³rico mensal completo apÃ³s qualquer mudanÃ§a (save manual
+         ou virada de mÃªs detectada automaticamente). Ãštil se o Canvas
+         preferir guardar tudo numa Ãºnica cÃ©lula em vez de tabela. -->
     <property name="historicoOrcamentoJsonOutput"
               display-name-key="HistoricoOrcamentoJsonOutput_DisplayName"
               description-key="HistoricoOrcamentoJsonOutput_Description"
@@ -241,7 +241,7 @@
               usage="output"
               required="false" />
 
-    <!-- OUTPUT: competência (YYYY-MM) do mês corrente. O Canvas usa como
+    <!-- OUTPUT: competÃªncia (YYYY-MM) do mÃªs corrente. O Canvas usa como
          primary key na linha da tabela cr660_orcamentohistorico. -->
     <property name="mesAtualCompetencia"
               display-name-key="MesAtualCompetencia_DisplayName"
@@ -250,9 +250,9 @@
               usage="output"
               required="false" />
 
-    <!-- OUTPUT: JSON apenas do payload do mês corrente:
-         { "setores": {...}, "contas": {...} }. Permite Patch numa única
-         linha sem reenviar o histórico inteiro. -->
+    <!-- OUTPUT: JSON apenas do payload do mÃªs corrente:
+         { "setores": {...}, "contas": {...} }. Permite Patch numa Ãºnica
+         linha sem reenviar o histÃ³rico inteiro. -->
     <property name="mesAtualPayloadJson"
               display-name-key="MesAtualPayloadJson_DisplayName"
               description-key="MesAtualPayloadJson_Description"
@@ -260,8 +260,8 @@
               usage="output"
               required="false" />
 
-    <!-- OUTPUT: timestamp epoch (ms) — muda em todo save manual ou virada
-         de mês. Use no OnChange como gatilho do Patch. -->
+    <!-- OUTPUT: timestamp epoch (ms) â€” muda em todo save manual ou virada
+         de mÃªs. Use no OnChange como gatilho do Patch. -->
     <property name="historicoUpdatedTimestamp"
               display-name-key="HistoricoUpdatedTimestamp_DisplayName"
               description-key="HistoricoUpdatedTimestamp_Description"
@@ -270,7 +270,7 @@
               required="false" />
 
     <!-- OUTPUT: id do pedido atualmente selecionado (card clicado).
-         Canvas App pode usar para navegação ou highlights. -->
+         Canvas App pode usar para navegaÃ§Ã£o ou highlights. -->
     <property name="selectedRecordId"
               display-name-key="SelectedRecordId_DisplayName"
               description-key="SelectedRecordId_Description"
@@ -278,7 +278,7 @@
               usage="output"
               required="false" />
 
-    <!-- OUTPUT: JSON do último pedido editado.
+    <!-- OUTPUT: JSON do Ãºltimo pedido editado.
          Shape: { id: string, fields: {...}, at: number }.
          Canvas App reage via OnChange e faz Patch() na SharePoint List. -->
     <property name="lastEditedJson"
@@ -288,8 +288,8 @@
               usage="output"
               required="false" />
 
-    <!-- OUTPUT: timestamp epoch ms do último save.
-         Útil para o Canvas detectar mudança mesmo se o JSON for idêntico. -->
+    <!-- OUTPUT: timestamp epoch ms do Ãºltimo save.
+         Ãštil para o Canvas detectar mudanÃ§a mesmo se o JSON for idÃªntico. -->
     <property name="lastEditedTimestamp"
               display-name-key="LastEditedTimestamp_DisplayName"
               description-key="LastEditedTimestamp_Description"
@@ -318,3 +318,4 @@
 
   </control>
 </manifest>
+

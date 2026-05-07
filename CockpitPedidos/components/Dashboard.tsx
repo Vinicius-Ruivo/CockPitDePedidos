@@ -290,6 +290,51 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     onSelectPedido(undefined);
   }, [onSelectPedido]);
 
+  const handleExportPedidosExcel = React.useCallback(() => {
+    const headers = [
+      "MARCA",
+      "DIRETORIA",
+      "CENTRO DE CUSTO",
+      "FORNECEDOR",
+      "VALOR",
+      "DATA E HORA DA SOLICITACAO",
+      "STATUS",
+      "NUMERO DE REQUISICAO",
+      "N° NOTA",
+      "CONTA CONTABIL",
+    ];
+    const rows = pedidosFiltrados.map((p) => [
+      p.marca ?? "",
+      p.diretoria ?? "",
+      p.centroCusto ?? "",
+      p.fornecedor ?? "",
+      formatCurrencyExport(p.valor),
+      formatDateTimeExport(p.dataSolicitacao),
+      p.status ?? "",
+      p.numeroRequisicao ?? "",
+      p.numeroNota ?? "",
+      p.contaContabil ?? "",
+    ]);
+    const csvBody = [headers, ...rows]
+      .map((r) => r.map(csvEscape).join(";"))
+      .join("\r\n");
+    const csv = `\uFEFF${csvBody}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const mesTag = filtroMes === "todos" ? "todos-meses" : filtroMes;
+    const stamp = new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .slice(0, 15);
+    anchor.href = url;
+    anchor.download = `pedidos_export_${mesTag}_${stamp}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }, [filtroMes, pedidosFiltrados]);
+
   // --------------------- Estilo ---------------------
 
   const rootStyle: React.CSSProperties = {
@@ -502,6 +547,15 @@ export const Dashboard: React.FC<IDashboardProps> = ({
                 Limpar setor
               </button>
             )}
+            <button
+              type="button"
+              className="cp-btn cp-btn-ghost cp-btn-sm"
+              onClick={handleExportPedidosExcel}
+              disabled={loading || pedidosFiltrados.length === 0}
+              title="Exportar pedidos filtrados para CSV compatível com Excel"
+            >
+              Exportar Excel
+            </button>
           </div>
 
           <div className="cp-dash-cards-list">
@@ -688,4 +742,38 @@ function formatCurrencyCompact(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `R$ ${(n / 1_000_000).toFixed(1)}M`;
   if (Math.abs(n) >= 1_000) return `R$ ${(n / 1_000).toFixed(1)}k`;
   return `R$ ${n.toFixed(0)}`;
+}
+
+function formatCurrencyExport(n?: number): string {
+  if (n == null || !Number.isFinite(n)) return "";
+  try {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+    }).format(n);
+  } catch {
+    return n.toFixed(2);
+  }
+}
+
+function formatDateTimeExport(d?: Date): string {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(d);
+  } catch {
+    return d.toISOString();
+  }
+}
+
+function csvEscape(v: unknown): string {
+  const s = String(v ?? "");
+  return `"${s.replace(/"/g, "\"\"")}"`;
 }

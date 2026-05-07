@@ -1,60 +1,60 @@
-# Referência — Cockpit de pedidos (estado base validado)
+﻿# ReferÃªncia â€” Cockpit de pedidos (estado base validado)
 
-Este ficheiro é o **ponto de partida** para futuros updates: descreve o que estava a funcionar no repositório (PCF) e o que deve existir na **Canvas App** (Power Fx, ligações). Ao mudar algo, compara com isto para ver o que divergiu.
+Este ficheiro Ã© o **ponto de partida** para futuros updates: descreve o que estava a funcionar no repositÃ³rio (PCF) e o que deve existir na **Canvas App** (Power Fx, ligaÃ§Ãµes). Ao mudar algo, compara com isto para ver o que divergiu.
 
-**Versão PCF publicada (base):** `1.1.47` — alinhar sempre `CockpitPedidos/ControlManifest.Input.xml` (`<control version="…">`) e `CockpitPedidos/constants/controlVersion.ts`.
+**VersÃ£o PCF publicada (base):** `1.1.47` â€” alinhar sempre `CockpitPedidos/ControlManifest.Input.xml` (`<control version="â€¦">`) e `CockpitPedidos/constants/controlVersion.ts`.
 
-**Cópia “fonte” dos fragmentos Canvas:** pasta `powerfx/` na raiz do repo (ficheiros `.txt` em Power Fx). Se alterares a app, atualiza também esses ficheiros para o Git refletir a verdade.
+**CÃ³pia â€œfonteâ€ dos fragmentos Canvas:** pasta `powerfx/` na raiz do repo (ficheiros `.txt` em Power Fx). Se alterares a app, atualiza tambÃ©m esses ficheiros para o Git refletir a verdade.
 
 ---
 
 ## 1. Fluxo de dados (resumo)
 
-1. **Pedidos:** dataset `PEDIDOS` → propriedade `Items` do código → PCF mostra cards e drawer.
-2. **Histórico de orçamento mensal:** variável global `varHistoricoJson` (JSON com chaves `YYYY-MM`) → input `historicoOrcamentoJson` do PCF.
-3. **Legado (opcional):** `orcamentosJson` / `orcamentosContasJson` ligados a variáveis da **Configuração Cockpit** — o PCF ainda usa como *seed* quando o histórico não cobre o mês.
-4. **Persistência:** o PCF **não** grava no Dataverse; emite outputs. O **OnChange** do controlo no Canvas faz `Patch` em `PEDIDOS`, `Configuração Cockpit` e `Histórico de Orçamento`.
+1. **Pedidos:** dataset `PEDIDOS` â†’ propriedade `Items` do cÃ³digo â†’ PCF mostra cards e drawer.
+2. **HistÃ³rico de orÃ§amento mensal:** variÃ¡vel global `varHistoricoJson` (JSON com chaves `YYYY-MM`) â†’ input `historicoOrcamentoJson` do PCF.
+3. **Legado (opcional):** `orcamentosJson` / `orcamentosContasJson` ligados a variÃ¡veis da **ConfiguraÃ§Ã£o Cockpit** â€” o PCF ainda usa como *seed* quando o histÃ³rico nÃ£o cobre o mÃªs.
+4. **PersistÃªncia:** o PCF **nÃ£o** grava no Dataverse; emite outputs. O **OnChange** do controlo no Canvas faz `Patch` em `PEDIDOS`, `ConfiguraÃ§Ã£o Cockpit` e `HistÃ³rico de OrÃ§amento`.
 
 ---
 
-## 2. Ligações do componente no Canvas (ex.: `CockpitPedidos1`)
+## 2. LigaÃ§Ãµes do componente no Canvas (ex.: `CockpitPedidos1`)
 
-| Propriedade | Valor de referência |
+| Propriedade | Valor de referÃªncia |
 |--------------|---------------------|
-| **Items** | `Filter( PEDIDOS; varAtualizaTela = varAtualizaTela )` — força reavaliação quando `varAtualizaTela` muda (ex. após `Patch` de pedido). Inicializar `varAtualizaTela` no `OnStart` (ex. `Now()`). |
+| **Items** | `Filter( PEDIDOS; varAtualizaTela = varAtualizaTela )` â€” forÃ§a reavaliaÃ§Ã£o quando `varAtualizaTela` muda (ex. apÃ³s `Patch` de pedido). Inicializar `varAtualizaTela` no `OnStart` (ex. `Now()`). |
 | **historicoOrcamentoJson** | `varHistoricoJson` |
-| **orcamentosJson** | Variável ligada ao JSON de orçamento na config (ex. `varOrcamentosJSON`) |
-| **orcamentosContasJson** | Segunda variável se existir coluna só de contas; senão pode ficar em branco |
+| **orcamentosJson** | VariÃ¡vel ligada ao JSON de orÃ§amento na config (ex. `varOrcamentosJSON`) |
+| **orcamentosContasJson** | Segunda variÃ¡vel se existir coluna sÃ³ de contas; senÃ£o pode ficar em branco |
 
-Ajustar o **nome do controlo** (`CockpitPedidos1`) nas fórmulas abaixo se for diferente.
+Ajustar o **nome do controlo** (`CockpitPedidos1`) nas fÃ³rmulas abaixo se for diferente.
 
 ---
 
-## 3. Variáveis globais (Canvas)
+## 3. VariÃ¡veis globais (Canvas)
 
-| Variável | Uso |
+| VariÃ¡vel | Uso |
 |----------|-----|
-| `varHistoricoJson` | Texto JSON: `{ "2026-05": { "setores": {...}, "contas": {...} }, … }` |
-| `varLastHistoricoTs` | Último `historicoUpdatedTimestamp` processado no `OnChange` |
-| `varLastOrcTimestamp` | Último `orcamentosUpdatedTimestamp` processado |
-| `varOrcamentosJSON` | Eco do output de orçamentos para Patch na config |
+| `varHistoricoJson` | Texto JSON: `{ "2026-05": { "setores": {...}, "contas": {...} }, â€¦ }` |
+| `varLastHistoricoTs` | Ãšltimo `historicoUpdatedTimestamp` processado no `OnChange` |
+| `varLastOrcTimestamp` | Ãšltimo `orcamentosUpdatedTimestamp` processado |
+| `varOrcamentosJSON` | Eco do output de orÃ§amentos para Patch na config |
 | `gEdit` | Resultado de `ParseJSON(lastEditedJson)` no fluxo de pedidos |
-| `varAtualizaTela` | “Relógio” para o `Filter` dos `Items` |
+| `varAtualizaTela` | â€œRelÃ³gioâ€ para o `Filter` dos `Items` |
 
 ---
 
-## 4. App `OnStart` — carregar histórico (referência)
+## 4. App `OnStart` â€” carregar histÃ³rico (referÃªncia)
 
-Incluir **após** `Refresh` da tabela. Nomes **lógicos** da app do utilizador: `'Histórico de Orçamento'`, `Competencia`, `PayloadJson` — trocar se no teu ambiente forem outros (ex. prefixo `cr660_`).
+Incluir **apÃ³s** `Refresh` da tabela. Nomes **lÃ³gicos** da app do utilizador: `'HistÃ³rico de OrÃ§amento'`, `Competencia`, `PayloadJson` â€” trocar se no teu ambiente forem outros (ex. prefixo `cr660_`).
 
 ```powerfx
-Refresh( 'Histórico de Orçamento' );;
+Refresh( 'HistÃ³rico de OrÃ§amento' );;
 Set(
     varHistoricoJson;
     "{" &
     Concat(
         ForAll(
-            Sort( 'Histórico de Orçamento'; Competencia ) As R;
+            Sort( 'HistÃ³rico de OrÃ§amento'; Competencia ) As R;
             """" & R.Competencia & """:" & R.PayloadJson
         );
         Value;
@@ -65,13 +65,13 @@ Set(
 Set( varLastHistoricoTs; 0 )
 ```
 
-Recomendação: repetir a mesma lógica no **`OnVisible`** do ecrã principal (ou após `Refresh` manual da tabela) para dados alinhados quando se entra na tela sem fechar a app.
+RecomendaÃ§Ã£o: repetir a mesma lÃ³gica no **`OnVisible`** do ecrÃ£ principal (ou apÃ³s `Refresh` manual da tabela) para dados alinhados quando se entra na tela sem fechar a app.
 
 ---
 
-## 5. `OnChange` do controlo — referência completa
+## 5. `OnChange` do controlo â€” referÃªncia completa
 
-Colar no **OnChange** do código (Power Apps Studio). Três blocos encadeados com `;;`.
+Colar no **OnChange** do cÃ³digo (Power Apps Studio). TrÃªs blocos encadeados com `;;`.
 
 ```powerfx
 If(
@@ -111,9 +111,9 @@ If(
     Coalesce( CockpitPedidos1.orcamentosUpdatedTimestamp; 0 ) > varLastOrcTimestamp;
     Set( varOrcamentosJSON; CockpitPedidos1.orcamentosJsonOutput );;
     Patch(
-        'Configuração Cockpit';
-        LookUp( 'Configuração Cockpit'; Nome = "Default" );
-        { 'Orçamentos JSON': varOrcamentosJSON }
+        'ConfiguraÃ§Ã£o Cockpit';
+        LookUp( 'ConfiguraÃ§Ã£o Cockpit'; Nome = "Default" );
+        { 'OrÃ§amentos JSON': varOrcamentosJSON }
     );;
     Set( varLastOrcTimestamp; CockpitPedidos1.orcamentosUpdatedTimestamp )
 );;
@@ -128,10 +128,10 @@ If(
         If(
             !IsBlank( mes ) && !IsBlank( payload );
             Patch(
-                'Histórico de Orçamento';
+                'HistÃ³rico de OrÃ§amento';
                 Coalesce(
-                    LookUp( 'Histórico de Orçamento'; Competencia = mes );
-                    Defaults( 'Histórico de Orçamento' )
+                    LookUp( 'HistÃ³rico de OrÃ§amento'; Competencia = mes );
+                    Defaults( 'HistÃ³rico de OrÃ§amento' )
                 );
                 {
                     Competencia: mes;
@@ -140,12 +140,12 @@ If(
             )
         );;
         Set( varHistoricoJson; CockpitPedidos1.historicoOrcamentoJsonOutput );;
-        Refresh( 'Histórico de Orçamento' );;
+        Refresh( 'HistÃ³rico de OrÃ§amento' );;
         Set(
             varHistoricoJson;
             "{" &
             Concat(
-                'Histórico de Orçamento';
+                'HistÃ³rico de OrÃ§amento';
                 """" & Competencia & """:" & PayloadJson;
                 ","
             ) &
@@ -156,42 +156,44 @@ If(
 )
 ```
 
-**Detalhe importante:** no bloco do histórico, `Set( varLastHistoricoTs; … )` está **no fim** do `With`, fora do `If` interno do `Patch`, para o timestamp avançar sempre que o controlo sinaliza uma alteração de histórico — evita ficar preso se `mes`/`payload` falharem uma vez.
+**Detalhe importante:** no bloco do histÃ³rico, `Set( varLastHistoricoTs; â€¦ )` estÃ¡ **no fim** do `With`, fora do `If` interno do `Patch`, para o timestamp avanÃ§ar sempre que o controlo sinaliza uma alteraÃ§Ã£o de histÃ³rico â€” evita ficar preso se `mes`/`payload` falharem uma vez.
 
 ---
 
-## 6. PCF — o que este estado base assume (comportamento)
+## 6. PCF â€” o que este estado base assume (comportamento)
 
 Ficheiros principais:
 
-- `CockpitPedidos/index.ts` — dataset, `absorverInputs`, `handleSaveOrcamentos`, outputs; **não** chama `markHistoricoChanged` ao criar só o slot vazio do mês (evita `historicoUpdatedTimestamp` “falso” e Patch vazio no Canvas após F5).
-- `CockpitPedidos/components/Dashboard.tsx` — filtro **Mês de chegada** persistido em `localStorage` (`cp-cockpit-filtro-mes`).
-- `CockpitPedidos/utils/metrics.ts` — `parseHistoricoOrcamentos` tolerante (vírgulas finais, chaves `setores`/`contas` case-insensitive, mapa plano por mês).
+- `CockpitPedidos/index.ts` â€” dataset, `absorverInputs`, `handleSaveOrcamentos`, outputs; **nÃ£o** chama `markHistoricoChanged` ao criar sÃ³ o slot vazio do mÃªs (evita `historicoUpdatedTimestamp` â€œfalsoâ€ e Patch vazio no Canvas apÃ³s F5).
+- `CockpitPedidos/components/Dashboard.tsx` â€” filtro **MÃªs de chegada** persistido em `localStorage` (`cp-cockpit-filtro-mes`).
+- `CockpitPedidos/utils/metrics.ts` â€” `parseHistoricoOrcamentos` tolerante (vÃ­rgulas finais, chaves `setores`/`contas` case-insensitive, mapa plano por mÃªs).
 
-Documentação extra: `README.md` (Dataverse, bindings, troubleshooting).
+DocumentaÃ§Ã£o extra: `README.md` (Dataverse, bindings, troubleshooting).
 
 ---
 
-## 7. Histórico de versões PCF (resumo do que corrigiu bugs)
+## 7. HistÃ³rico de versÃµes PCF (resumo do que corrigiu bugs)
 
-| Versão | Notas |
+| VersÃ£o | Notas |
 |--------|--------|
-| 1.1.41 | Janela anti-stale maior no input do histórico |
-| 1.1.42 | Não disparar Patch ao criar slot vazio com input ainda vazio |
+| 1.1.41 | Janela anti-stale maior no input do histÃ³rico |
+| 1.1.42 | NÃ£o disparar Patch ao criar slot vazio com input ainda vazio |
 | 1.1.43 | Nunca `notify` ao criar slot vazio |
-| 1.1.44 | Parse de histórico mais robusto; guia OnStart com `ForAll` |
-| **1.1.45** | **Não** atualizar `lastHistoricoEmitted` ao criar slot vazio — evita Patch fantasma ao clicar num pedido com `varLastHistoricoTs = 0` após F5 |
-| **1.1.46** | **Salvar orçamento (contas):** no `ResumoOrcamento`, deixou de usar `Number.isFinite` em brutos nos valores de `contas` — strings vindas do JSON (Dataverse) eram descartadas e as contas contábeis não persistiam. |
-| **1.1.47** | **Contas contábeis:** `draftContasRef` no salvar (último estado síncrono); `serializeOrcamentosPayload` normaliza números; `agregarPorSubcategoria` lê orçamento de conta com `parseOrcamentoValor` (strings após F5); `handleSaveOrcamentos` tolera `contas` indefinido. |
+| 1.1.44 | Parse de histÃ³rico mais robusto; guia OnStart com `ForAll` |
+| **1.1.45** | **NÃ£o** atualizar `lastHistoricoEmitted` ao criar slot vazio â€” evita Patch fantasma ao clicar num pedido com `varLastHistoricoTs = 0` apÃ³s F5 |
+| **1.1.46** | **Salvar orÃ§amento (contas):** no `ResumoOrcamento`, deixou de usar `Number.isFinite` em brutos nos valores de `contas` â€” strings vindas do JSON (Dataverse) eram descartadas e as contas contÃ¡beis nÃ£o persistiam. |
+| **1.1.47** | **Contas contÃ¡beis:** `draftContasRef` no salvar (Ãºltimo estado sÃ­ncrono); `serializeOrcamentosPayload` normaliza nÃºmeros; `agregarPorSubcategoria` lÃª orÃ§amento de conta com `parseOrcamentoValor` (strings apÃ³s F5); `handleSaveOrcamentos` tolera `contas` indefinido. |
 
 ---
 
 ## 8. Ao fazer um update no futuro
 
-1. Comparar este documento + `powerfx/*.txt` com o que está na app publicada.
+1. Comparar este documento + `powerfx/*.txt` com o que estÃ¡ na app publicada.
 2. Comparar `ControlManifest.Input.xml` / `index.ts` / `Dashboard.tsx` / `metrics.ts` com o branch atual.
-3. Depois de alterar o PCF: incrementar versão no manifest + `controlVersion.ts`, `npm run deploy` (ou `npm run ship`), conforme regra do projeto em `.cursor/rules/`.
+3. Depois de alterar o PCF: incrementar versÃ£o no manifest + `controlVersion.ts`, `npm run deploy` (ou `npm run ship`), conforme regra do projeto em `.cursor/rules/`.
 
 ---
 
-*Última alinhamento com o repo: versão PCF `1.1.47` e conteúdos em `powerfx/` iguais aos blocos acima.*
+*Ãšltima alinhamento com o repo: versÃ£o PCF `1.1.47` e conteÃºdos em `powerfx/` iguais aos blocos acima.*
+
+
