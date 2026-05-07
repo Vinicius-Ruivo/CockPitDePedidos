@@ -297,26 +297,26 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       "DIRETORIA",
       "CENTRO DE CUSTO",
       "FORNECEDOR",
+      "DESPESA",
       "VALOR",
       "DATA E HORA DA SOLICITACAO",
       "STATUS",
       "NUMERO DE REQUISICAO",
       "N° NOTA",
       "CONTA CONTABIL",
-      "DESPESA",
     ];
     const rows = pedidosFiltrados.map((p) => [
       p.marca ?? "",
       p.diretoria ?? "",
       p.centroCusto ?? "",
       p.fornecedor ?? "",
+      p.despesa ?? "",
       formatCurrencyExport(p.valor),
       formatDateTimeExport(p.dataSolicitacao),
       p.status ?? "",
       p.numeroRequisicao ?? "",
       p.numeroNota ?? "",
       p.contaContabil ?? "",
-      p.despesa ?? "",
     ]);
     const aoa = [headers, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
