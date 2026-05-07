@@ -336,13 +336,9 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
-    const mesTag = filtroMes === "todos" ? "todos-meses" : filtroMes;
-    const stamp = new Date()
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .slice(0, 15);
+    const mesExportado = filtroMes === "todos" ? "TODOS-OS-MESES" : filtroMes;
     anchor.href = url;
-    anchor.download = `pedidos_export_${mesTag}_${stamp}.csv`;
+    anchor.download = `EMPENHADO & COMPROMETIDO (${mesExportado}).csv`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
