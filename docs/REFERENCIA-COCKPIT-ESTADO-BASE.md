@@ -197,3 +197,4 @@ DocumentaÃ§Ã£o extra: `README.md` (Dataverse, bindings, troubleshooting).
 *Ãšltima alinhamento com o repo: versÃ£o PCF `1.1.47` e conteÃºdos em `powerfx/` iguais aos blocos acima.*
 
 
+

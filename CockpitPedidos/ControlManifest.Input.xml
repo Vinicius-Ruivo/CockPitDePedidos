@@ -2,7 +2,7 @@
 <manifest>
   <control namespace="CockpitPedidos"
            constructor="CockpitPedidos"
-           version="1.1.48"
+           version="1.1.49"
            display-name-key="CockpitPedidos_DisplayName"
            description-key="CockpitPedidos_Description"
            control-type="virtual">
@@ -318,4 +318,5 @@
 
   </control>
 </manifest>
+
 
