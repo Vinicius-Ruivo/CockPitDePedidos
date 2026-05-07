@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as XLSX from "xlsx";
 import "../Dashboard.css";
 import "../PedidoForm.css";
 import { IHistoricoOrcamentos, IOrcamentosPayload, IPedido, IPedidoData, MesISO } from "../types";
@@ -315,9 +316,17 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       p.numeroNota ?? "",
       p.contaContabil ?? "",
     ]);
-    const csvBody = [headers, ...rows]
-      .map((r) => r.map(csvEscape).join(";"))
-      .join("\r\n");
+    const aoa = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = headers.map((_, colIdx) => {
+      const maxLen = aoa.reduce((acc, row) => {
+        const cell = String(row[colIdx] ?? "");
+        return Math.max(acc, cell.length);
+      }, 0);
+      return { wch: Math.min(60, Math.max(12, maxLen + 2)) };
+    });
+    // Mantém a geração em formato "planilha" e converte para CSV só no download.
+    const csvBody = XLSX.utils.sheet_to_csv(ws, { FS: ";", RS: "\r\n" });
     const csv = `\uFEFF${csvBody}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -552,7 +561,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
               className="cp-btn cp-btn-ghost cp-btn-sm"
               onClick={handleExportPedidosExcel}
               disabled={loading || pedidosFiltrados.length === 0}
-              title="Exportar pedidos filtrados para CSV compatível com Excel"
+              title="Exportar pedidos filtrados para CSV (gerado a partir da planilha)"
             >
               Exportar Excel
             </button>
@@ -773,8 +782,4 @@ function formatDateTimeExport(d?: Date): string {
   }
 }
 
-function csvEscape(v: unknown): string {
-  const s = String(v ?? "");
-  return `"${s.replace(/"/g, "\"\"")}"`;
-}
 
