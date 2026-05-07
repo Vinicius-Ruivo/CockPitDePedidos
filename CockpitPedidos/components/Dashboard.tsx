@@ -1,5 +1,4 @@
 import * as React from "react";
-import * as XLSX from "xlsx";
 import "../Dashboard.css";
 import "../PedidoForm.css";
 import { IHistoricoOrcamentos, IOrcamentosPayload, IPedido, IPedidoData, MesISO } from "../types";
@@ -316,22 +315,11 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       p.numeroNota ?? "",
       p.contaContabil ?? "",
     ]);
-    const aoa = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = headers.map((_, colIdx) => {
-      const maxLen = aoa.reduce((acc, row) => {
-        const cell = String(row[colIdx] ?? "");
-        return Math.max(acc, cell.length);
-      }, 0);
-      // Excel usa "wch" (largura em caracteres). Deixa um padding e limite para não exagerar.
-      return { wch: Math.min(60, Math.max(12, maxLen + 2)) };
-    });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
-    const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
+    const csvBody = [headers, ...rows]
+      .map((r) => r.map(csvEscape).join(";"))
+      .join("\r\n");
+    const csv = `\uFEFF${csvBody}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     const mesTag = filtroMes === "todos" ? "todos-meses" : filtroMes;
@@ -340,7 +328,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       .replace(/[-:]/g, "")
       .slice(0, 15);
     anchor.href = url;
-    anchor.download = `pedidos_export_${mesTag}_${stamp}.xlsx`;
+    anchor.download = `pedidos_export_${mesTag}_${stamp}.csv`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -564,7 +552,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
               className="cp-btn cp-btn-ghost cp-btn-sm"
               onClick={handleExportPedidosExcel}
               disabled={loading || pedidosFiltrados.length === 0}
-              title="Exportar pedidos filtrados para planilha Excel (.xlsx)"
+              title="Exportar pedidos filtrados para CSV compatível com Excel"
             >
               Exportar Excel
             </button>
@@ -783,5 +771,10 @@ function formatDateTimeExport(d?: Date): string {
   } catch {
     return d.toISOString();
   }
+}
+
+function csvEscape(v: unknown): string {
+  const s = String(v ?? "");
+  return `"${s.replace(/"/g, "\"\"")}"`;
 }
 
