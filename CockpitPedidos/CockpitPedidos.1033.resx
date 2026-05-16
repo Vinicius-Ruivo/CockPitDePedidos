@@ -89,6 +89,13 @@
     <value>DATASOLICITACAO — when the order was submitted.</value>
   </data>
 
+  <data name="Competencia_DisplayName" xml:space="preserve">
+    <value>Competence</value>
+  </data>
+  <data name="Competencia_Description" xml:space="preserve">
+    <value>Monthly competence in the format MAY/2026. It is auto-filled from request date/time, but remains editable.</value>
+  </data>
+
   <data name="Marca_DisplayName" xml:space="preserve">
     <value>Brand</value>
   </data>
@@ -166,6 +173,12 @@
   <data name="NumeroChamado_Description" xml:space="preserve">
     <value>Related support ticket number. Primary owner: Luciana.</value>
   </data>
+  <data name="TempoUm_DisplayName" xml:space="preserve">
+    <value>Lead Time 1</value>
+  </data>
+  <data name="TempoUm_Description" xml:space="preserve">
+    <value>Elapsed time between request date/time and ticket number fill-in (HH:MM:SS).</value>
+  </data>
 
   <data name="Natureza_DisplayName" xml:space="preserve">
     <value>Nature</value>
@@ -179,6 +192,12 @@
   </data>
   <data name="NumeroRequisicao_Description" xml:space="preserve">
     <value>Internal requisition number. Primary owner: Luciana.</value>
+  </data>
+  <data name="TempoDois_DisplayName" xml:space="preserve">
+    <value>Lead Time 2</value>
+  </data>
+  <data name="TempoDois_Description" xml:space="preserve">
+    <value>Elapsed time between ticket number fill-in and requisition number fill-in (HH:MM:SS).</value>
   </data>
 
   <!-- LUCIANO -->

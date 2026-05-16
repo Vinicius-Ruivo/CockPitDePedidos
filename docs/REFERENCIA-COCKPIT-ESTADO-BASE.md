@@ -1,206 +1,187 @@
-﻿# ReferÃªncia â€” Cockpit de pedidos (estado base validado)
+# Referência — Cockpit de pedidos (estado base validado)
 
-Este ficheiro Ã© o **ponto de partida** para futuros updates: descreve o que estava a funcionar no repositÃ³rio (PCF) e o que deve existir na **Canvas App** (Power Fx, ligaÃ§Ãµes). Ao mudar algo, compara com isto para ver o que divergiu.
+Este ficheiro é o **ponto de partida** para futuros updates: descreve o que está a funcionar no repositório (PCF) e o que deve existir na **Canvas App** (Power Fx, ligações). Ao mudar algo, compara com isto para ver o que divergiu.
 
-**VersÃ£o PCF publicada (base):** `1.1.47` â€” alinhar sempre `CockpitPedidos/ControlManifest.Input.xml` (`<control version="â€¦">`) e `CockpitPedidos/constants/controlVersion.ts`.
+**Versão PCF publicada (modelo base):** `1.1.97` — alinhar sempre `CockpitPedidos/ControlManifest.Input.xml` (`<control version="…">`) e `CockpitPedidos/constants/controlVersion.ts` (badge no header do dashboard).
 
-**CÃ³pia â€œfonteâ€ dos fragmentos Canvas:** pasta `powerfx/` na raiz do repo (ficheiros `.txt` em Power Fx). Se alterares a app, atualiza tambÃ©m esses ficheiros para o Git refletir a verdade.
+> **Marco:** a partir de **1.1.97** este repositório define o **estado base validado** (overlay de análise, animações, limpeza de código morto, CI com lint). Use este commit/versão como referência para evoluções futuras.
+
+**Cópia “fonte” dos fragmentos Canvas:** pasta `powerfx/` na raiz do repo (ficheiros `.txt` em Power Fx). Se alterares a app, atualiza também esses ficheiros para o Git refletir a verdade.
+
+| Ficheiro | Uso |
+|----------|-----|
+| `powerfx/CockpitPedidos-OnChange.txt` | OnChange do controlo (pedido + orçamentos + histórico + Notificacao) |
+| `powerfx/CockpitPedidos-OnStart-varHistoricoJson.txt` | OnStart / OnVisible — carregar `varHistoricoJson` |
 
 ---
 
 ## 1. Fluxo de dados (resumo)
 
-1. **Pedidos:** dataset `PEDIDOS` â†’ propriedade `Items` do cÃ³digo â†’ PCF mostra cards e drawer.
-2. **HistÃ³rico de orÃ§amento mensal:** variÃ¡vel global `varHistoricoJson` (JSON com chaves `YYYY-MM`) â†’ input `historicoOrcamentoJson` do PCF.
-3. **Legado (opcional):** `orcamentosJson` / `orcamentosContasJson` ligados a variÃ¡veis da **ConfiguraÃ§Ã£o Cockpit** â€” o PCF ainda usa como *seed* quando o histÃ³rico nÃ£o cobre o mÃªs.
-4. **PersistÃªncia:** o PCF **nÃ£o** grava no Dataverse; emite outputs. O **OnChange** do controlo no Canvas faz `Patch` em `PEDIDOS`, `ConfiguraÃ§Ã£o Cockpit` e `HistÃ³rico de OrÃ§amento`.
+1. **Pedidos:** dataset `PEDIDOS` → propriedade `Items` do código → PCF mostra cards e drawer.
+2. **Histórico de orçamento mensal:** variável global `varHistoricoJson` (JSON com chaves `YYYY-MM`) → input `historicoOrcamentoJson` do PCF.
+3. **Legado (opcional):** `orcamentosJson` / `orcamentosContasJson` ligados à **Configuração Cockpit** — o PCF ainda usa como *seed* quando o histórico não cobre o mês.
+4. **Persistência:** o PCF **não** grava no Dataverse; emite outputs. O **OnChange** do controlo no Canvas faz `Patch` em `PEDIDOS`, `Notificacao` (quando há nº de chamado), `Configuração Cockpit` e `Histórico de Orçamento`.
+5. **Novos pedidos:** entram via Forms / Power Automate (não há “criar pedido” no PCF).
 
 ---
 
-## 2. LigaÃ§Ãµes do componente no Canvas (ex.: `CockpitPedidos1`)
+## 2. Ligações do componente no Canvas (ex.: `CockpitPedidos1`)
 
-| Propriedade | Valor de referÃªncia |
-|--------------|---------------------|
-| **Items** | `Filter( PEDIDOS; varAtualizaTela = varAtualizaTela )` â€” forÃ§a reavaliaÃ§Ã£o quando `varAtualizaTela` muda (ex. apÃ³s `Patch` de pedido). Inicializar `varAtualizaTela` no `OnStart` (ex. `Now()`). |
+| Propriedade | Valor de referência |
+|-------------|---------------------|
+| **Items** | `Filter( PEDIDOS; varAtualizaTela = varAtualizaTela )` — força reavaliação quando `varAtualizaTela` muda (ex. após `Patch` de pedido). Inicializar `varAtualizaTela` no `OnStart` (ex. `Now()`). |
 | **historicoOrcamentoJson** | `varHistoricoJson` |
-| **orcamentosJson** | VariÃ¡vel ligada ao JSON de orÃ§amento na config (ex. `varOrcamentosJSON`) |
-| **orcamentosContasJson** | Segunda variÃ¡vel se existir coluna sÃ³ de contas; senÃ£o pode ficar em branco |
+| **orcamentosJson** | Variável ligada ao JSON de orçamento na config (ex. `varOrcamentosJSON`) |
+| **orcamentosContasJson** | Segunda variável se existir coluna só de contas; senão pode ficar em branco |
 
-Ajustar o **nome do controlo** (`CockpitPedidos1`) nas fÃ³rmulas abaixo se for diferente.
+Ajustar o **nome do controlo** (`CockpitPedidos1`) nas fórmulas abaixo se for diferente.
 
 ---
 
-## 3. VariÃ¡veis globais (Canvas)
+## 3. Variáveis globais (Canvas)
 
-| VariÃ¡vel | Uso |
+| Variável | Uso |
 |----------|-----|
-| `varHistoricoJson` | Texto JSON: `{ "2026-05": { "setores": {...}, "contas": {...} }, â€¦ }` |
-| `varLastHistoricoTs` | Ãšltimo `historicoUpdatedTimestamp` processado no `OnChange` |
-| `varLastOrcTimestamp` | Ãšltimo `orcamentosUpdatedTimestamp` processado |
-| `varOrcamentosJSON` | Eco do output de orÃ§amentos para Patch na config |
+| `varHistoricoJson` | Texto JSON: `{ "2026-05": { "setores": {...}, "contas": {...} }, … }` |
+| `varLastHistoricoTs` | Último `historicoUpdatedTimestamp` processado no `OnChange` |
+| `varLastOrcTimestamp` | Último `orcamentosUpdatedTimestamp` processado |
+| `varOrcamentosJSON` | Eco do output de orçamentos para Patch na config |
 | `gEdit` | Resultado de `ParseJSON(lastEditedJson)` no fluxo de pedidos |
-| `varAtualizaTela` | â€œRelÃ³gioâ€ para o `Filter` dos `Items` |
+| `varAtualizaTela` | “Relógio” para o `Filter` dos `Items` |
 
 ---
 
-## 4. App `OnStart` â€” carregar histÃ³rico (referÃªncia)
+## 4. App `OnStart` — carregar histórico (referência)
 
-Incluir **apÃ³s** `Refresh` da tabela. Nomes **lÃ³gicos** da app do utilizador: `'HistÃ³rico de OrÃ§amento'`, `Competencia`, `PayloadJson` â€” trocar se no teu ambiente forem outros (ex. prefixo `cr660_`).
+Fonte canónica: `powerfx/CockpitPedidos-OnStart-varHistoricoJson.txt`.
 
-```powerfx
-Refresh( 'HistÃ³rico de OrÃ§amento' );;
-Set(
-    varHistoricoJson;
-    "{" &
-    Concat(
-        ForAll(
-            Sort( 'HistÃ³rico de OrÃ§amento'; Competencia ) As R;
-            """" & R.Competencia & """:" & R.PayloadJson
-        );
-        Value;
-        ","
-    ) &
-    "}"
-);;
-Set( varLastHistoricoTs; 0 )
-```
+Incluir **após** `Refresh` da tabela. Nomes **lógicos** da app: `'Histórico de Orçamento'`, `Competencia`, `PayloadJson` — trocar se no ambiente forem outros (ex. prefixo `cr660_`).
 
-RecomendaÃ§Ã£o: repetir a mesma lÃ³gica no **`OnVisible`** do ecrÃ£ principal (ou apÃ³s `Refresh` manual da tabela) para dados alinhados quando se entra na tela sem fechar a app.
+Recomendação: repetir a mesma lógica no **`OnVisible`** do ecrã principal (ou após `Refresh` manual) para dados alinhados quando se entra na tela sem fechar a app.
 
 ---
 
-## 5. `OnChange` do controlo â€” referÃªncia completa
+## 5. `OnChange` do controlo — referência
 
-Colar no **OnChange** do cÃ³digo (Power Apps Studio). TrÃªs blocos encadeados com `;;`.
+**Fonte canónica:** `powerfx/CockpitPedidos-OnChange.txt` (colar no OnChange do código no Power Apps Studio).
 
-```powerfx
-If(
-    !IsBlank( CockpitPedidos1.lastEditedJson );
-    Set( gEdit; ParseJSON( CockpitPedidos1.lastEditedJson ) );;
-    Patch(
-        PEDIDOS;
-        LookUp( PEDIDOS; PEDIDOS = GUID( Text( gEdit.id ) ) );
-        {
-            STATUS:              Text( gEdit.fields.status );
-            DATASOLICITACAO:     DateTimeValue( Text( gEdit.fields.dataSolicitacao ) );
-            FORNECEDOR:          Text( gEdit.fields.fornecedor );
-            CONTACONTABIL:       Text( gEdit.fields.contaContabil );
-            DESPESA:             Text( gEdit.fields.despesa );
-            QUANTIDADE:          Text( gEdit.fields.quantidade );
-            RESPONSAVEL:         Text( gEdit.fields.responsavel );
-            NATUREZA:            Text( gEdit.fields.natureza );
-            SETOR:               Text( gEdit.fields.setor );
-            CNPJ:                Text( gEdit.fields.cnpj );
-            NUMERODECHAMADO:     Text( gEdit.fields.numeroChamado );
-            VALOR:               Value( gEdit.fields.valor );
-            CENTRODECUSTO:       Text( gEdit.fields.centroCusto );
-            NUMERODEREQUISICAO:  Text( gEdit.fields.numeroRequisicao );
-            ORDEMDECOMPRA:       Text( gEdit.fields.ordemCompra );
-            NUMERODANOTA:        Text( gEdit.fields.numeroNota );
-            NUMERODOORCAMENTO:   Text( gEdit.fields.numeroOrcamento );
-            VENCIMENTO:          If( IsBlank( gEdit.fields.vencimento ); Blank(); DateValue( Text( gEdit.fields.vencimento ) ) )
-        }
-    );;
-    Refresh( PEDIDOS );;
-    UpdateContext({ varAtualizaTela: Now() })
-);;
+Três blocos encadeados com `;;`:
 
-If(
-    !IsBlank( CockpitPedidos1.orcamentosJsonOutput ) &&
-    !IsBlank( CockpitPedidos1.orcamentosUpdatedTimestamp ) &&
-    Coalesce( CockpitPedidos1.orcamentosUpdatedTimestamp; 0 ) > varLastOrcTimestamp;
-    Set( varOrcamentosJSON; CockpitPedidos1.orcamentosJsonOutput );;
-    Patch(
-        'ConfiguraÃ§Ã£o Cockpit';
-        LookUp( 'ConfiguraÃ§Ã£o Cockpit'; Nome = "Default" );
-        { 'OrÃ§amentos JSON': varOrcamentosJSON }
-    );;
-    Set( varLastOrcTimestamp; CockpitPedidos1.orcamentosUpdatedTimestamp )
-);;
+1. **Pedido** — se `lastEditedJson` não estiver em branco: `Patch` em `PEDIDOS` com todos os campos do formulário (inclui `COMPETENCIA`, `CENTRODECUSTO`, `TEMPOUM`, `TEMPODOIS`, etc.).
+2. **Notificacao** — se `numeroChamado` não estiver em branco: `Patch` ou `Patch`+`Defaults` em `Notificacao` com **`NUMERODECHAMADO`** (não usar `NUMERODEREQUISICAO` nesta tabela).
+3. **Orçamentos (config)** — se `orcamentosUpdatedTimestamp` avançou: `Patch` em `'Configuração Cockpit'`.
+4. **Histórico mensal** — se `historicoUpdatedTimestamp` avançou: `Patch` na linha do mês em `'Histórico de Orçamento'` e reconstruir `varHistoricoJson`.
 
-If(
-    Coalesce( CockpitPedidos1.historicoUpdatedTimestamp; 0 ) > varLastHistoricoTs;
-    With(
-        {
-            mes: CockpitPedidos1.mesAtualCompetencia;
-            payload: CockpitPedidos1.mesAtualPayloadJson
-        };
-        If(
-            !IsBlank( mes ) && !IsBlank( payload );
-            Patch(
-                'HistÃ³rico de OrÃ§amento';
-                Coalesce(
-                    LookUp( 'HistÃ³rico de OrÃ§amento'; Competencia = mes );
-                    Defaults( 'HistÃ³rico de OrÃ§amento' )
-                );
-                {
-                    Competencia: mes;
-                    PayloadJson: payload
-                }
-            )
-        );;
-        Set( varHistoricoJson; CockpitPedidos1.historicoOrcamentoJsonOutput );;
-        Refresh( 'HistÃ³rico de OrÃ§amento' );;
-        Set(
-            varHistoricoJson;
-            "{" &
-            Concat(
-                'HistÃ³rico de OrÃ§amento';
-                """" & Competencia & """:" & PayloadJson;
-                ","
-            ) &
-            "}"
-        );;
-        Set( varLastHistoricoTs; CockpitPedidos1.historicoUpdatedTimestamp )
-    )
-)
-```
+**Detalhe importante:** no bloco do histórico, `Set( varLastHistoricoTs; … )` está **no fim** do `With`, fora do `If` interno do `Patch`, para o timestamp avançar sempre que o controlo sinaliza alteração — evita ficar preso se `mes`/`payload` falharem uma vez.
 
-**Detalhe importante:** no bloco do histÃ³rico, `Set( varLastHistoricoTs; â€¦ )` estÃ¡ **no fim** do `With`, fora do `If` interno do `Patch`, para o timestamp avanÃ§ar sempre que o controlo sinaliza uma alteraÃ§Ã£o de histÃ³rico â€” evita ficar preso se `mes`/`payload` falharem uma vez.
+**Após salvar pedido:** `Set( varAtualizaTela; Now() )` (não só `UpdateContext`).
 
 ---
 
-## 6. PCF â€” o que este estado base assume (comportamento)
+## 6. PCF — comportamento assumido (v1.1.97)
 
-Ficheiros principais:
+### Ficheiros principais
 
-- `CockpitPedidos/index.ts` â€” dataset, `absorverInputs`, `handleSaveOrcamentos`, outputs; **nÃ£o** chama `markHistoricoChanged` ao criar sÃ³ o slot vazio do mÃªs (evita `historicoUpdatedTimestamp` â€œfalsoâ€ e Patch vazio no Canvas apÃ³s F5).
-- `CockpitPedidos/components/Dashboard.tsx` â€” filtro **MÃªs de chegada** persistido em `localStorage` (`cp-cockpit-filtro-mes`).
-- `CockpitPedidos/utils/metrics.ts` â€” `parseHistoricoOrcamentos` tolerante (vÃ­rgulas finais, chaves `setores`/`contas` case-insensitive, mapa plano por mÃªs).
+| Área | Ficheiros |
+|------|-----------|
+| Ciclo PCF / outputs | `CockpitPedidos/index.ts` |
+| Dashboard | `components/Dashboard.tsx`, `Dashboard.css` |
+| Formulário / drawer | `components/PedidoForm.tsx`, `components/EditDrawer.tsx`, `PedidoForm.css` |
+| Orçamento | `components/ResumoOrcamento.tsx` |
+| Gráficos | `components/GraficosBarras.tsx`, `components/PieChartSubcategorias.tsx`, `utils/chartBarGradients.tsx` |
+| Métricas / histórico | `utils/metrics.ts` |
+| Exportação planilha | `utils/pedidosExport.ts` |
+| Marca Ânima | `constants/animaBrand.ts`, `animaBrand.css` (cores + Roboto/Open Sans) |
+| Centro de custo | `constants/centrosCusto.ts` |
+| Notificação (constantes) | `constants/notificacao.ts` |
 
-DocumentaÃ§Ã£o extra: `README.md` (Dataverse, bindings, troubleshooting).
+### Comportamento funcional
+
+- **Filtro “Mês de chegada”:** usa `dataSolicitacao` do pedido (não `COMPETENCIA`). Persistido em `localStorage` (`cp-cockpit-filtro-mes`). Opção “todos” mostra todos os pedidos; orçamento no resumo segue o mês selecionado ou o mês atual quando “todos”.
+- **Orçamento por mês:** slot `YYYY-MM` em `historicoOrcamentoJson`; novo mês começa vazio até “Salvar orçamentos”. O PCF **não** emite `historicoUpdatedTimestamp` ao criar só o slot vazio (evita Patch fantasma no Canvas após F5).
+- **Drawer “Editar pedido”:** `PedidoForm` com `embedded` e **`autoSave={false}`** — grava com botão **Salvar** (ou Fechar sem auto-save).
+- **Exportação:** botões **Exportar EC** (11 colunas layout EC) e **Exportar Tudo** (todos os campos), sobre pedidos **já filtrados** na lista. Ficheiros: `EMPENHADO & COMPROMETIDO (mês).csv` e `PEDIDOS (mês).csv` (ou `TODOS-OS-MESES`).
+- **Centro de custo:** `<select>` com catálogo fixo em `centrosCusto.ts`; valores fora do catálogo (legado) continuam visíveis no registo.
+- **Gráfico de pizza:** revelação horária (0→360°) ao abrir o modal; gradientes nas fatias; donut com raio interno reduzido.
+- **Gráficos de barras:** crescimento 4 s, stagger esquerda→direita; gradientes SVG; rótulos acima das barras sem prefixo `R$` (eixo/KPIs mantêm moeda).
+- **Análise de orçamento:** overlay em tela cheia (`cp-dash-graficos-overlay`) — fundo roxo + barra + gráficos **sobem e descem juntos** (0,82 s); o cockpit permanece visível por baixo até o painel cobrir; barra recolhida na grelha quando fechado.
+
+### Temas visuais (toggle ☀️ / 🌙 no header)
+
+| Toggle | Classe CSS | Descrição |
+|--------|------------|-----------|
+| 🌙 (padrão) | *(sem `--light`)* | Modo escuro — gradiente roxo institucional (`#5B2D82` → fundo profundo) |
+| ☀️ | `cp-dash-root--light` | Tema **vibrante Ânima** — gradiente roxo → magenta (`#5B2D82` → `#B51E84`), painéis em vidro (sem blocos brancos sólidos) |
+
+Preferência guardada em `localStorage` (`cp-cockpit-theme`: `dark` | `light`).
+
+**Paleta oficial** (manual de marca, março 2023): `constants/animaBrand.ts` + variáveis CSS em `animaBrand.css` — roxo `#5B2D82`, magenta `#B51E84`, teal `#00B4AA` (acento/CTA), azul `#42B4E4`, laranja `#F58220` (projetado/análise), etc.
+
+**Tipografia:** Google Fonts **Roboto** (400/500/700) e **Open Sans** como fallback (`animaBrand.css`), conforme hierarquia web do manual. **Amsi Pro** não é embutida (licença proprietária).
+
+### `index.ts` — regras que não devem regredir
+
+- Não chamar `markHistoricoChanged` ao criar **apenas** o slot vazio do mês corrente.
+- Não atualizar `lastHistoricoEmitted` nesse caso (evita eco falso no OnChange após refresh).
+- `parseHistoricoOrcamentos` tolerante (vírgulas finais, `setores`/`contas` case-insensitive).
+
+Documentação operacional extra: `README.md` (bindings, troubleshooting).
 
 ---
 
-## 7. HistÃ³rico de versÃµes PCF (resumo do que corrigiu bugs)
+## 7. Histórico de versões PCF (resumo)
 
-| VersÃ£o | Notas |
+| Versão | Notas |
 |--------|--------|
-| 1.1.41 | Janela anti-stale maior no input do histÃ³rico |
-| 1.1.42 | NÃ£o disparar Patch ao criar slot vazio com input ainda vazio |
-| 1.1.43 | Nunca `notify` ao criar slot vazio |
-| 1.1.44 | Parse de histÃ³rico mais robusto; guia OnStart com `ForAll` |
-| **1.1.45** | **NÃ£o** atualizar `lastHistoricoEmitted` ao criar slot vazio â€” evita Patch fantasma ao clicar num pedido com `varLastHistoricoTs = 0` apÃ³s F5 |
-| **1.1.46** | **Salvar orÃ§amento (contas):** no `ResumoOrcamento`, deixou de usar `Number.isFinite` em brutos nos valores de `contas` â€” strings vindas do JSON (Dataverse) eram descartadas e as contas contÃ¡beis nÃ£o persistiam. |
-| **1.1.47** | **Contas contÃ¡beis:** `draftContasRef` no salvar (Ãºltimo estado sÃ­ncrono); `serializeOrcamentosPayload` normaliza nÃºmeros; `agregarPorSubcategoria` lÃª orÃ§amento de conta com `parseOrcamentoValor` (strings apÃ³s F5); `handleSaveOrcamentos` tolera `contas` indefinido. |
+| 1.1.41–1.1.45 | Anti-stale do histórico; não Patch ao criar slot vazio; `lastHistoricoEmitted` |
+| 1.1.46–1.1.47 | Persistência de contas contábeis no orçamento; parse robusto |
+| 1.1.48+ | Evoluções de histórico mensal e filtro por mês (ver commits) |
+| 1.1.72–1.1.74 | Painel “Análise de orçamento” com animação de expansão |
+| 1.1.75 | Pizza: fatia 100% visível |
+| 1.1.77 | Centro de custo (select com catálogo) |
+| 1.1.79–1.1.80 | Modo claro: selects legíveis; correção seta duplicada em dropdowns |
+| 1.1.81 | Drawer: remoção da faixa roxa no rodapé (modo claro) |
+| 1.1.82 | Painéis/chips no tema vibrante sem branco sólido |
+| 1.1.83 | Paleta oficial Ânima (`animaBrand.ts`); gráficos e KPIs alinhados |
+| 1.1.84 | `animaBrand.css`: Roboto/Open Sans; paleta Ânima unificada |
+| 1.1.85–1.1.94 | Animação barras; pizza; gradientes; overlay análise (subida) |
+| 1.1.95–1.1.96 | Overlay: fundo sobe com animação; fecho simétrico (descida) |
+| **1.1.97** | **Modelo base:** limpeza CSS morto (`graficos-fullscreen`/`immersive`); remoção `@fluentui/react` npm; CI com `npm run lint`; refatorações lint |
 
 ---
 
-## 8. Ao fazer um update no futuro
+## 8. CI no GitHub
 
-1. Comparar este documento + `powerfx/*.txt` com o que estÃ¡ na app publicada.
-2. Comparar `ControlManifest.Input.xml` / `index.ts` / `Dashboard.tsx` / `metrics.ts` com o branch atual.
-3. Depois de alterar o PCF: incrementar versÃ£o no manifest + `controlVersion.ts`, `npm run deploy` (ou `npm run ship`), conforme regra do projeto em `.cursor/rules/`.
+Workflow: `.github/workflows/ci.yml`
+
+- Dispara em **push** e **pull_request** (qualquer branch).
+- Passos: `npm ci` → `npm run lint` → `npm run build` (compila o PCF; **não** faz deploy ao ambiente).
+- Node.js **20** no `ubuntu-latest`.
+
+O badge de status pode ser adicionado ao `README.md` após o primeiro run no repositório remoto.
 
 ---
 
-*Ãšltima alinhamento com o repo: versÃ£o PCF `1.1.47` e conteÃºdos em `powerfx/` iguais aos blocos acima.*
+## 9. Ao fazer um update no futuro
 
+1. Comparar este documento + `powerfx/*.txt` com o que está na app publicada.
+2. Comparar `ControlManifest.Input.xml` / `index.ts` / `Dashboard.tsx` / `metrics.ts` / `pedidosExport.ts` com o branch atual.
+3. Depois de alterar o PCF: incrementar versão no manifest + `controlVersion.ts`, `npm run deploy` (ou `npm run ship`), conforme regra em `.cursor/rules/pcf-deploy-always.mdc`.
+4. Republicar a Canvas App e confirmar que a versão do controlo no maker é a nova (ex. **1.1.97** no canto do header).
+5. Confirmar que o workflow **CI** passou no GitHub antes de fazer merge (se usarem PRs).
 
+---
 
+## 10. Checklist rápido pós-deploy
 
+- [ ] Header mostra `v1.1.97` (ou versão atual).
+- [ ] Abrir/fechar «Análise de orçamento» — painel sobe e desce por cima do cockpit (sem fundo roxo instantâneo).
+- [ ] Editar pedido → Salvar → dados refletem em `PEDIDOS` após `varAtualizaTela`.
+- [ ] Com nº de chamado preenchido → registo em `Notificacao` com `NUMERODECHAMADO`.
+- [ ] Salvar orçamentos → mês correto em `Histórico de Orçamento`.
+- [ ] Filtro de mês altera cards e exportação.
+- [ ] Exportar EC / Exportar Tudo geram CSV com pedidos filtrados.
 
+---
 
-
-
-
+*Último alinhamento com o repo: versão PCF **1.1.97** (modelo base); OnChange e OnStart iguais a `powerfx/CockpitPedidos-OnChange.txt` e `powerfx/CockpitPedidos-OnStart-varHistoricoJson.txt`.*

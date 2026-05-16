@@ -12,6 +12,7 @@
 export const PEDIDO_COLUMNS = [
   "cr660_titulodopedido",
   "cr660_datasolicitacao",
+  "cr660_competencia",
   "cr660_marca",
   "cr660_diretoria",
   "cr660_despesa",
@@ -24,8 +25,10 @@ export const PEDIDO_COLUMNS = [
   "cr660_valor",
   "cr660_responsavel",
   "cr660_numerodechamado",
+  "cr660_tempoum",
   "cr660_natureza",
   "cr660_numeroderequisicao",
+  "cr660_tempodois",
 
   "cr660_centrodecusto",
   "cr660_contacontabil",
@@ -48,6 +51,8 @@ export interface IPedido {
   // Automáticos / Forms (Dataverse: título, data/hora solicitação, etc.)
   tituloPedido?: string;
   dataSolicitacao?: Date;
+  /** Competência no formato "MAIO/2026" (editável). */
+  competencia?: string;
   marca?: string;
   diretoria?: string;
   despesa?: string;
@@ -62,8 +67,12 @@ export interface IPedido {
   valor?: number;
   responsavel?: string;
   numeroChamado?: string;
+  /** Duração desde a data de solicitação até o preenchimento do Nº de Chamado (HH:MM:SS). */
+  tempoUm?: string;
   natureza?: string;
   numeroRequisicao?: string;
+  /** Duração entre o preenchimento do Nº de Chamado e o Nº de Requisição (HH:MM:SS). */
+  tempoDois?: string;
 
   // Responsabilidade — Luciano
   centroCusto?: string;
@@ -89,6 +98,7 @@ export type IPedidoData = Omit<IPedido, "id">;
 export const DATAVERSE_TO_IPEDIDO: Record<string, keyof IPedidoData> = {
   cr660_titulodopedido: "tituloPedido",
   cr660_datasolicitacao: "dataSolicitacao",
+  cr660_competencia: "competencia",
   cr660_marca: "marca",
   cr660_diretoria: "diretoria",
   cr660_despesa: "despesa",
@@ -101,8 +111,10 @@ export const DATAVERSE_TO_IPEDIDO: Record<string, keyof IPedidoData> = {
   cr660_valor: "valor",
   cr660_responsavel: "responsavel",
   cr660_numerodechamado: "numeroChamado",
+  cr660_tempoum: "tempoUm",
   cr660_natureza: "natureza",
   cr660_numeroderequisicao: "numeroRequisicao",
+  cr660_tempodois: "tempoDois",
 
   cr660_centrodecusto: "centroCusto",
   cr660_contacontabil: "contaContabil",

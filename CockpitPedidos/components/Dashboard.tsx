@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as XLSX from "xlsx";
+import "../animaBrand.css";
 import "../Dashboard.css";
 import "../PedidoForm.css";
 import { IHistoricoOrcamentos, IOrcamentosPayload, IPedido, IPedidoData, MesISO } from "../types";
@@ -22,6 +22,11 @@ import {
   somarOrcamentosNoIntervalo,
   totaisGlobais,
 } from "../utils/metrics";
+import {
+  EXPORT_EC_COLUMNS,
+  EXPORT_TUDO_COLUMNS,
+  exportPedidosPlanilha,
+} from "../utils/pedidosExport";
 import { CONTROL_VERSION } from "../constants/controlVersion";
 import { PedidoCard } from "./PedidoCard";
 import { ResumoOrcamento } from "./ResumoOrcamento";
@@ -100,6 +105,51 @@ export const Dashboard: React.FC<IDashboardProps> = ({
   const [filtroSubcategoria, setFiltroSubcategoria] =
     React.useState<string>("todas");
   const [graficosAberto, setGraficosAberto] = React.useState(false);
+  /** Mantém o painel no DOM após a 1.ª abertura para animar fechar/abrir. */
+  const [graficosMontado, setGraficosMontado] = React.useState(false);
+  /** Overlay visível enquanto desce (mesma animação da subida, invertida). */
+  const [graficosFechando, setGraficosFechando] = React.useState(false);
+  /** Incrementa ao abrir «Análise de orçamento» — dispara animação das barras. */
+  const [barGrowEpoch, setBarGrowEpoch] = React.useState(0);
+
+  const graficosOverlayAtivo = graficosAberto || graficosFechando;
+
+  const finalizarFechoGraficos = React.useCallback(() => {
+    setGraficosFechando(false);
+    setGraficosAberto(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (!graficosFechando) return;
+    const t = window.setTimeout(finalizarFechoGraficos, 860);
+    return () => window.clearTimeout(t);
+  }, [graficosFechando, finalizarFechoGraficos]);
+
+  const onGraficosSheetAnimationEnd = React.useCallback(
+    (e: React.AnimationEvent<HTMLDivElement>) => {
+      if (e.target !== e.currentTarget || !graficosFechando) return;
+      if (e.animationName === "cp-dash-graficos-sheet-fall") finalizarFechoGraficos();
+    },
+    [graficosFechando, finalizarFechoGraficos],
+  );
+
+  const toggleGraficos = React.useCallback(() => {
+    if (graficosFechando) return;
+    if (graficosAberto) {
+      setGraficosFechando(true);
+      return;
+    }
+    if (!graficosMontado) {
+      setGraficosMontado(true);
+      requestAnimationFrame(() => {
+        setGraficosAberto(true);
+        setBarGrowEpoch((e) => e + 1);
+      });
+      return;
+    }
+    setGraficosAberto(true);
+    setBarGrowEpoch((e) => e + 1);
+  }, [graficosAberto, graficosFechando, graficosMontado]);
   const [theme, setTheme] = React.useState<ThemeChoice>(() => {
     try {
       return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
@@ -291,59 +341,24 @@ export const Dashboard: React.FC<IDashboardProps> = ({
     onSelectPedido(undefined);
   }, [onSelectPedido]);
 
-  const handleExportPedidosExcel = React.useCallback(() => {
-    const headers = [
-      "MARCA",
-      "DIRETORIA",
-      "CENTRO DE CUSTO",
-      "FORNECEDOR",
-      "DESPESA",
-      "VALOR",
-      "DATA E HORA DA SOLICITACAO",
-      "STATUS",
-      "NUMERO DE REQUISICAO",
-      "N° NOTA",
-      "CONTA CONTABIL",
-    ];
-    const rows = pedidosFiltrados.map((p) => [
-      p.marca ?? "",
-      p.diretoria ?? "",
-      p.centroCusto ?? "",
-      p.fornecedor ?? "",
-      p.despesa ?? "",
-      formatCurrencyExport(p.valor),
-      formatDateTimeExport(p.dataSolicitacao),
-      p.status ?? "",
-      p.numeroRequisicao ?? "",
-      p.numeroNota ?? "",
-      p.contaContabil ?? "",
-    ]);
-    const aoa = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = headers.map((_, colIdx) => {
-      const maxLen = aoa.reduce((acc, row) => {
-        const cell = String(row[colIdx] ?? "");
-        return Math.max(acc, cell.length);
-      }, 0);
-      return { wch: Math.min(60, Math.max(12, maxLen + 2)) };
-    });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
-    const xlsxBuffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    // Pedido do utilizador: conteúdo .xlsx, mas nome final do download como .csv.
-    const blob = new Blob([xlsxBuffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    const mesExportado = filtroMes === "todos" ? "TODOS-OS-MESES" : filtroMes;
-    anchor.href = url;
-    anchor.download = `EMPENHADO & COMPROMETIDO (${mesExportado}).csv`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  }, [filtroMes, pedidosFiltrados]);
+  const mesExportado = filtroMes === "todos" ? "TODOS-OS-MESES" : filtroMes;
+  const exportDisabled = loading || pedidosFiltrados.length === 0;
+
+  const handleExportEC = React.useCallback(() => {
+    exportPedidosPlanilha(
+      pedidosFiltrados,
+      EXPORT_EC_COLUMNS,
+      `EMPENHADO & COMPROMETIDO (${mesExportado}).csv`,
+    );
+  }, [mesExportado, pedidosFiltrados]);
+
+  const handleExportTudo = React.useCallback(() => {
+    exportPedidosPlanilha(
+      pedidosFiltrados,
+      EXPORT_TUDO_COLUMNS,
+      `PEDIDOS (${mesExportado}).csv`,
+    );
+  }, [mesExportado, pedidosFiltrados]);
 
   // --------------------- Estilo ---------------------
 
@@ -362,7 +377,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
 
   return (
     <div
-      className={`cp-dash-root${height && height > 0 ? " cp-dash-root--viewport" : ""}${themeClass}${graficosAberto ? " cp-dash-root--graficos-immersive" : ""}`}
+      className={`cp-dash-root${height && height > 0 ? " cp-dash-root--viewport" : ""}${themeClass}`}
       style={rootStyle}
       data-cp-theme={theme}
     >
@@ -431,7 +446,7 @@ export const Dashboard: React.FC<IDashboardProps> = ({
       {/* ================= GRID PRINCIPAL ================= */}
       <main className="cp-dash-main">
         <div
-          className={`cp-dash-grid${graficosAberto ? " cp-dash-grid--graficos-fullscreen" : ""}`}
+          className="cp-dash-grid"
         >
         {/* ---- PAINEL CARDS (esquerda, linha 1) ---- */}
         <section
@@ -557,15 +572,26 @@ export const Dashboard: React.FC<IDashboardProps> = ({
                 Limpar setor
               </button>
             )}
-            <button
-              type="button"
-              className="cp-btn cp-btn-ghost cp-btn-sm"
-              onClick={handleExportPedidosExcel}
-              disabled={loading || pedidosFiltrados.length === 0}
-              title="Exportar pedidos filtrados para CSV (gerado a partir da planilha)"
-            >
-              Exportar Excel
-            </button>
+            <div className="cp-dash-export-group" role="group" aria-label="Exportar pedidos">
+              <button
+                type="button"
+                className="cp-btn cp-btn-ghost cp-btn-sm"
+                onClick={handleExportEC}
+                disabled={exportDisabled}
+                title="Exportar layout EC (Empenhado & Comprometido) dos pedidos filtrados"
+              >
+                Exportar EC
+              </button>
+              <button
+                type="button"
+                className="cp-btn cp-btn-ghost cp-btn-sm"
+                onClick={handleExportTudo}
+                disabled={exportDisabled}
+                title="Exportar todos os campos dos pedidos filtrados"
+              >
+                Exportar Tudo
+              </button>
+            </div>
           </div>
 
           <div className="cp-dash-cards-list">
@@ -614,7 +640,6 @@ export const Dashboard: React.FC<IDashboardProps> = ({
             pedidos={pedidosNaVista as IPedido[]}
             totalOrcamento={totais.orcamentoTotal}
             totalRealizado={totais.realizadoTotal}
-            totalSaldo={totais.saldoTotal}
             canEdit={filtroMes !== "todos"}
             readOnlyReason="Selecione um mês específico para editar o orçamento daquela competência."
             onSaveOrcamentos={(payload) => onSaveOrcamentos(payload, mesOrcamentoEditavel)}
@@ -623,43 +648,90 @@ export const Dashboard: React.FC<IDashboardProps> = ({
 
         {/* ---- PAINEL GRÁFICOS (barra recolhível; linha 2, largura total) ---- */}
         <section
-          className={`cp-dash-panel cp-dash-panel-graficos${graficosAberto ? " cp-dash-panel-graficos--open" : " cp-dash-panel-graficos--shut"}`}
-          aria-labelledby="cp-panel-graficos-title"
+          className={`cp-dash-panel cp-dash-panel-graficos${
+            graficosOverlayAtivo ? " cp-dash-panel-graficos--collapsed" : " cp-dash-panel-graficos--shut"
+          }`}
+          aria-hidden={graficosOverlayAtivo}
         >
-          <button
-            type="button"
-            id="cp-panel-graficos-title"
-            className="cp-dash-graficos-bar"
-            onClick={() => setGraficosAberto((v) => !v)}
-            aria-expanded={graficosAberto}
-            aria-controls="cp-graficos-expand"
-            title={graficosAberto ? "Recolher" : "Expandir"}
-          >
-            <span className="cp-dash-graficos-bar-leading">
-              <span className="cp-dash-graficos-bar-dot" aria-hidden="true" />
-              <span className="cp-dash-graficos-bar-label">Análise De Orçamento</span>
-            </span>
-            <span className="cp-dash-graficos-chevron" aria-hidden="true">
-              {graficosAberto ? "▲" : "▼"}
-            </span>
-          </button>
-          {graficosAberto && (
-            <div
-              id="cp-graficos-expand"
-              className="cp-dash-graficos-expand"
-              role="region"
-              aria-label="Análise de orçamento"
+          {!graficosOverlayAtivo && (
+            <button
+              type="button"
+              id="cp-panel-graficos-title"
+              className="cp-dash-graficos-bar"
+              onClick={toggleGraficos}
+              aria-expanded={false}
+              aria-controls="cp-graficos-expand"
+              title="Expandir"
             >
-              <GraficosBarras
-                pedidos={pedidosFiltrados as unknown as IPedido[]}
-                historicoOrcamentos={historicoOrcamentos}
-                mesTravado={filtroMes === "todos" ? undefined : filtroMes}
-              />
-            </div>
+              <span className="cp-dash-graficos-bar-leading">
+                <span className="cp-dash-graficos-bar-dot" aria-hidden="true" />
+                <span className="cp-dash-graficos-bar-label">Análise De Orçamento</span>
+              </span>
+              <span className="cp-dash-graficos-chevron" aria-hidden="true">
+                ▼
+              </span>
+            </button>
           )}
         </section>
         </div>
       </main>
+
+      {/* Overlay «Análise de orçamento» — sobe/desce por cima do cockpit (fundo + conteúdo juntos) */}
+      {graficosMontado && graficosOverlayAtivo && (
+        <div
+          className="cp-dash-graficos-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cp-panel-graficos-title"
+        >
+          <div
+            className={`cp-dash-graficos-sheet${
+              graficosFechando
+                ? " cp-dash-graficos-sheet--close"
+                : " cp-dash-graficos-sheet--open"
+            }`}
+            onAnimationEnd={onGraficosSheetAnimationEnd}
+          >
+            <button
+              type="button"
+              id="cp-panel-graficos-title"
+              className="cp-dash-graficos-bar"
+              onClick={toggleGraficos}
+              aria-expanded={!graficosFechando}
+              aria-controls="cp-graficos-expand"
+              title="Recolher"
+            >
+              <span className="cp-dash-graficos-bar-leading">
+                <span className="cp-dash-graficos-bar-dot" aria-hidden="true" />
+                <span className="cp-dash-graficos-bar-label">Análise De Orçamento</span>
+              </span>
+              <span
+                className={`cp-dash-graficos-chevron${graficosFechando ? "" : " cp-dash-graficos-chevron--open"}`}
+                aria-hidden="true"
+              >
+                ▼
+              </span>
+            </button>
+            <div
+              id="cp-graficos-expand"
+              className="cp-dash-graficos-expand-wrap cp-dash-graficos-expand-wrap--open"
+              role="region"
+              aria-label="Análise de orçamento"
+            >
+              <div className="cp-dash-graficos-expand-inner">
+                <div className="cp-dash-graficos-expand">
+                  <GraficosBarras
+                    pedidos={pedidosFiltrados as unknown as IPedido[]}
+                    historicoOrcamentos={historicoOrcamentos}
+                    mesTravado={filtroMes === "todos" ? undefined : filtroMes}
+                    barGrowEpoch={barGrowEpoch}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= DRAWER (overlay) ================= */}
       <EditDrawer
@@ -753,34 +825,4 @@ function formatCurrencyCompact(n: number): string {
   if (Math.abs(n) >= 1_000) return `R$ ${(n / 1_000).toFixed(1)}k`;
   return `R$ ${n.toFixed(0)}`;
 }
-
-function formatCurrencyExport(n?: number): string {
-  if (n == null || !Number.isFinite(n)) return "";
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-    }).format(n);
-  } catch {
-    return n.toFixed(2);
-  }
-}
-
-function formatDateTimeExport(d?: Date): string {
-  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "";
-  try {
-    return new Intl.DateTimeFormat("pt-BR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(d);
-  } catch {
-    return d.toISOString();
-  }
-}
-
 

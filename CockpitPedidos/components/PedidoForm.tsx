@@ -1,4 +1,5 @@
 import * as React from "react";
+import "../animaBrand.css";
 import "../PedidoForm.css";
 import {
   SETORES_ORGANIZACAO,
@@ -9,6 +10,10 @@ import {
   mergeSetoresComCatalogo,
   setorLabelExibicao,
 } from "../constants/setoresOrganizacao";
+import {
+  CENTROS_CUSTO_OPCOES,
+  isCentroCustoCatalogado,
+} from "../constants/centrosCusto";
 import { CONTROL_VERSION } from "../constants/controlVersion";
 import { IPedidoData, STATUS_OPTIONS } from "../types";
 
@@ -47,13 +52,6 @@ export interface IPedidoFormProps {
 
 type Owner = "auto" | "luciana" | "luciano" | "shared";
 
-const OWNER_META: Record<Owner, { label: string; emoji: string }> = {
-  auto:     { label: "Automático",    emoji: "⚙️" },
-  luciana:  { label: "Luciana",       emoji: "🙋‍♀️" },
-  luciano:  { label: "Luciano",       emoji: "🙋‍♂️" },
-  shared:   { label: "Compartilhado", emoji: "🤝" },
-};
-
 /** Detecta mudança nos dados vindos do dataset (ex.: após Patch/Refresh no Canvas). */
 function snapshotPedidoData(p: IPedidoData): string {
   try {
@@ -86,6 +84,61 @@ const fromDateTimeLocalValue = (value: string): Date | undefined => {
   return isNaN(d.getTime()) ? undefined : d;
 };
 
+const COMPETENCIA_MESES_PT = [
+  "JANEIRO",
+  "FEVEREIRO",
+  "MARCO",
+  "ABRIL",
+  "MAIO",
+  "JUNHO",
+  "JULHO",
+  "AGOSTO",
+  "SETEMBRO",
+  "OUTUBRO",
+  "NOVEMBRO",
+  "DEZEMBRO",
+] as const;
+
+const formatCompetencia = (d?: Date): string | undefined => {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return undefined;
+  return `${COMPETENCIA_MESES_PT[d.getMonth()]}/${d.getFullYear()}`;
+};
+
+const parseDurationHmsToMs = (value?: string): number | undefined => {
+  if (!value) return undefined;
+  const src = value.trim();
+  const m =
+    src.match(/^(\d+):([0-5]\d):([0-5]\d)$/) ??
+    src.match(/\|\s*(\d+):([0-5]\d):([0-5]\d)\s*$/);
+  if (!m) return undefined;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  const seconds = Number(m[3]);
+  return ((hours * 60 + minutes) * 60 + seconds) * 1000;
+};
+
+const formatDurationMsToHms = (ms: number): string => {
+  const safe = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(safe / 3600);
+  const rem = safe % 3600;
+  const m = Math.floor(rem / 60);
+  const s = rem % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+};
+
+const formatDateTimeWithSecondsBR = (d: Date): string => {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(d.getFullYear());
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+};
+
+const formatTempoComData = (duracaoMs: number, instante: Date): string =>
+  `${formatDateTimeWithSecondsBR(instante)} | ${formatDurationMsToHms(duracaoMs)}`;
+
 const toNumberInputValue = (n?: number): string =>
   n === undefined || n === null || isNaN(n) ? "" : String(n);
 
@@ -111,19 +164,6 @@ const formatDateTimeBR = (d?: Date): string => {
 // Subcomponentes
 // -----------------------------------------------------------------------------
 
-const OwnerBadge: React.FC<{ owner: Owner }> = ({ owner }) => {
-  const meta = OWNER_META[owner];
-  return (
-    <span
-      className={`cp-badge cp-badge-${owner}`}
-      title={`Responsabilidade primária: ${meta.label}`}
-    >
-      <span className="cp-badge-emoji" aria-hidden="true">{meta.emoji}</span>
-      <span className="cp-badge-text">{meta.label}</span>
-    </span>
-  );
-};
-
 interface IFieldProps {
   label: string;
   owner: Owner;
@@ -136,7 +176,6 @@ const Field: React.FC<IFieldProps> = ({ label, owner, htmlFor, hint, children })
   <div className={`cp-field cp-field-${owner}`}>
     <div className="cp-field-header">
       <label className="cp-label" htmlFor={htmlFor}>{label}</label>
-      <OwnerBadge owner={owner} />
     </div>
     {children}
     {hint && <div className="cp-hint">{hint}</div>}
@@ -159,6 +198,7 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
   width,
   height,
 }) => {
+  const STALE_ROLLBACK_GUARD_MS = 6000;
   /**
    * Em modo embedded (drawer), buffer local. Com `autoSave`, cada alteração
    * agenda `onSave` após debounce; com `autoSave={false}` (drawer), só envia
@@ -178,6 +218,8 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
 
   const autoSaveTimerRef = React.useRef<number | null>(null);
   const latestBufferRef = React.useRef<IPedidoData>(pedido);
+  const rollbackGuardUntilRef = React.useRef<number>(0);
+  const preSaveSnapshotRef = React.useRef<string>(pedidoFromServerKey);
 
   /**
    * Quando o dataset do Canvas atualiza (novos valores vindos do servidor), alinha o buffer.
@@ -186,6 +228,14 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
   React.useEffect(() => {
     if (!embedded) return;
     if (dirty) return;
+    // Teams pode devolver um snapshot antigo logo após o Patch.
+    // Se for exatamente o mesmo estado pré-save, ignoramos por uma janela curta.
+    if (
+      Date.now() < rollbackGuardUntilRef.current &&
+      pedidoFromServerKey === preSaveSnapshotRef.current
+    ) {
+      return;
+    }
     setBuffer(pedido);
     latestBufferRef.current = pedido;
     setSaveStatus("idle");
@@ -210,6 +260,8 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
       // perder o setor preenchido junto com a conta contábil no último clique.
       const raw = payloadOverride ?? latestBufferRef.current;
       const payload = applyInferredSetorForSave(raw);
+      preSaveSnapshotRef.current = pedidoFromServerKey;
+      rollbackGuardUntilRef.current = Date.now() + STALE_ROLLBACK_GUARD_MS;
       onSave(payload);
       if (raw.setor !== payload.setor) {
         setBuffer(payload);
@@ -217,7 +269,7 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
       setDirty(false);
       setSaveStatus("saved");
     },
-    [clearAutoSaveTimer, onSave],
+    [clearAutoSaveTimer, onSave, pedidoFromServerKey],
   );
 
   const scheduleAutoSave = React.useCallback(
@@ -227,12 +279,21 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
       setSaveStatus("pending");
       autoSaveTimerRef.current = window.setTimeout(() => {
         autoSaveTimerRef.current = null;
+        preSaveSnapshotRef.current = pedidoFromServerKey;
+        rollbackGuardUntilRef.current = Date.now() + STALE_ROLLBACK_GUARD_MS;
         onSave(applyInferredSetorForSave(next));
         setDirty(false);
         setSaveStatus("saved");
       }, autoSaveDebounceMs);
     },
-    [autoSave, autoSaveDebounceMs, clearAutoSaveTimer, embedded, onSave],
+    [
+      autoSave,
+      autoSaveDebounceMs,
+      clearAutoSaveTimer,
+      embedded,
+      onSave,
+      pedidoFromServerKey,
+    ],
   );
 
   // Flush em unmount ou troca de pedido (ex.: drawer fechando).
@@ -242,18 +303,24 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
         window.clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = null;
         if (embedded && autoSave) {
+          preSaveSnapshotRef.current = pedidoFromServerKey;
+          rollbackGuardUntilRef.current = Date.now() + STALE_ROLLBACK_GUARD_MS;
           onSave?.(applyInferredSetorForSave(latestBufferRef.current));
         }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoSave, embedded, pedidoFromServerKey, onSave]);
 
   const updateField = React.useCallback(
     <K extends keyof IPedidoData>(field: K, value: IPedidoData[K]) => {
       if (embedded) {
         setBuffer((b) => {
           const next = { ...b, [field]: value } as IPedidoData;
+          if (field === "dataSolicitacao") {
+            next.competencia = formatCompetencia(
+              value as unknown as Date | undefined,
+            );
+          }
           if (field === "contaContabil") {
             // Regra de negócio: ao definir a Conta Contábil, se bater com uma
             // subcategoria conhecida, o Setor é preenchido automaticamente com
@@ -261,6 +328,34 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
             const auto = findSetorBySubcategoria(value as unknown as string);
             if (auto && next.setor !== auto) {
               (next as { setor?: string }).setor = auto;
+            }
+          }
+          if (field === "numeroChamado") {
+            const prev = (b.numeroChamado ?? "").trim();
+            const curr = String(value ?? "").trim();
+            if (!curr) {
+              next.tempoUm = "";
+              next.tempoDois = "";
+            } else if (!prev && b.dataSolicitacao && !isNaN(b.dataSolicitacao.getTime())) {
+              const agora = new Date();
+              next.tempoUm = formatTempoComData(
+                agora.getTime() - b.dataSolicitacao.getTime(),
+                agora,
+              );
+            }
+          }
+          if (field === "numeroRequisicao") {
+            const prev = (b.numeroRequisicao ?? "").trim();
+            const curr = String(value ?? "").trim();
+            if (!curr) {
+              next.tempoDois = "";
+            } else if (!prev) {
+              const tempoUmMs = parseDurationHmsToMs(next.tempoUm);
+              if (tempoUmMs !== undefined && b.dataSolicitacao && !isNaN(b.dataSolicitacao.getTime())) {
+                const agora = new Date();
+                const totalAteRequisicao = agora.getTime() - b.dataSolicitacao.getTime();
+                next.tempoDois = formatTempoComData(totalAteRequisicao - tempoUmMs, agora);
+              }
             }
           }
           scheduleAutoSave(next);
@@ -274,6 +369,12 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
         setSaveStatus((s) => (s === "saved" ? "idle" : s));
       } else {
         onFieldChange?.(field, value);
+        if (field === "dataSolicitacao") {
+          onFieldChange?.(
+            "competencia" as K,
+            formatCompetencia(value as unknown as Date | undefined) as unknown as IPedidoData[K],
+          );
+        }
         if (field === "contaContabil") {
           const auto = findSetorBySubcategoria(value as unknown as string);
           if (auto) {
@@ -508,6 +609,20 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
               value={toDateTimeLocalValue(current.dataSolicitacao)}
               onChange={handleDateTime("dataSolicitacao")} />
           </Field>
+          <Field
+            label="Competência"
+            owner="auto"
+            htmlFor="cp-competencia"
+          >
+            <input
+              id="cp-competencia"
+              type="text"
+              className="cp-input"
+              value={current.competencia ?? ""}
+              onChange={handleText("competencia")}
+              placeholder="Ex.: MAIO/2026"
+            />
+          </Field>
           <Field label="Marca" owner="auto" htmlFor="cp-marca">
             <input id="cp-marca" type="text" className="cp-input"
               value={current.marca ?? ""} onChange={handleText("marca")}
@@ -522,11 +637,6 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
             label="Despesa"
             owner="auto"
             htmlFor="cp-despesa"
-            hint={
-              subcategoriasSugeridas.length > 0
-                ? `Linhas do plano para o setor atual (${subcategoriasSugeridas.length} sugestões)`
-                : "Defina o Setor (05–10) para sugerir a linha de despesa; texto livre continua permitido."
-            }
           >
             <input
               id="cp-despesa"
@@ -552,82 +662,100 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
         </div>
       </section>
 
-      {/* ====== SEÇÃO 2 — LUCIANA ====== */}
-      <section className="cp-section cp-section-luciana">
+      {/* ====== SEÇÃO 2 — COMPLEMENTARES ====== */}
+      <section className="cp-section cp-section-shared">
         <div className="cp-section-head">
           <h3 className="cp-section-title">
-            <span className="cp-section-icon">🙋‍♀️</span> Tratamento — Luciana
-          </h3>
-          <p className="cp-section-desc">
-            Responsabilidade primária de compras. Qualquer pessoa pode editar.
-          </p>
+            <span className="cp-section-icon">🧩</span> Dados Do Pedido </h3>
         </div>
         <div className="cp-grid">
-          <Field label="Fornecedor" owner="luciana" htmlFor="cp-fornecedor">
+          <Field label="Fornecedor" owner="shared" htmlFor="cp-fornecedor">
             <input id="cp-fornecedor" type="text" className="cp-input"
               value={current.fornecedor ?? ""} onChange={handleText("fornecedor")}
               placeholder="Razão social" />
           </Field>
-          <Field label="CNPJ" owner="luciana" htmlFor="cp-cnpj">
+          <Field label="CNPJ" owner="shared" htmlFor="cp-cnpj">
             <input id="cp-cnpj" type="text" className="cp-input"
               value={current.cnpj ?? ""} onChange={handleText("cnpj")}
               placeholder="00.000.000/0000-00" />
           </Field>
-          <Field label="Nº Orçamento" owner="luciana" htmlFor="cp-numeroOrcamento">
+          <Field label="Nº Orçamento" owner="shared" htmlFor="cp-numeroOrcamento">
             <input id="cp-numeroOrcamento" type="text" className="cp-input"
               value={current.numeroOrcamento ?? ""}
               onChange={handleText("numeroOrcamento")} />
           </Field>
-          <Field label="Valor" owner="luciana" htmlFor="cp-valor" hint="R$ — moeda">
+          <Field label="Valor" owner="shared" htmlFor="cp-valor">
             <input id="cp-valor" type="number" step="0.01" min={0}
               className="cp-input cp-input-currency"
               value={toNumberInputValue(current.valor)}
               onChange={handleNumber("valor")} placeholder="0,00" />
           </Field>
-          <Field label="Responsável" owner="luciana" htmlFor="cp-responsavel">
+          <Field label="Responsável" owner="shared" htmlFor="cp-responsavel">
             <input id="cp-responsavel" type="text" className="cp-input"
               value={current.responsavel ?? ""}
               onChange={handleText("responsavel")} />
           </Field>
-          <Field label="Número de Chamado" owner="luciana" htmlFor="cp-numeroChamado">
+          <Field label="Número de Chamado" owner="shared" htmlFor="cp-numeroChamado">
             <input id="cp-numeroChamado" type="text" className="cp-input"
               value={current.numeroChamado ?? ""}
               onChange={handleText("numeroChamado")} />
           </Field>
-          <Field label="Natureza" owner="luciana" htmlFor="cp-natureza">
+          <Field label="Tempo 1" owner="shared" htmlFor="cp-tempoUm">
+            <input id="cp-tempoUm" type="text" className="cp-input"
+              value={current.tempoUm ?? ""}
+              onChange={handleText("tempoUm")}
+              placeholder="Ex.: 07/05/2026 23:17:10 | 00:05:42" />
+          </Field>
+          <Field label="Natureza" owner="shared" htmlFor="cp-natureza">
             <input id="cp-natureza" type="text" className="cp-input"
               value={current.natureza ?? ""} onChange={handleText("natureza")} />
           </Field>
-          <Field label="Número de Requisição" owner="luciana" htmlFor="cp-numeroRequisicao">
+          <Field label="Número de Requisição" owner="shared" htmlFor="cp-numeroRequisicao">
             <input id="cp-numeroRequisicao" type="text" className="cp-input"
               value={current.numeroRequisicao ?? ""}
               onChange={handleText("numeroRequisicao")} />
           </Field>
-        </div>
-      </section>
-
-      {/* ====== SEÇÃO 3 — LUCIANO ====== */}
-      <section className="cp-section cp-section-luciano">
-        <div className="cp-section-head">
-          <h3 className="cp-section-title">
-            <span className="cp-section-icon">🙋‍♂️</span> Financeiro — Luciano
-          </h3>
-          <p className="cp-section-desc">
-            Responsabilidade primária contábil. Qualquer pessoa pode editar.
-          </p>
-        </div>
-        <div className="cp-grid">
-          <Field label="Centro de Custo" owner="luciano" htmlFor="cp-centroCusto">
-            <input id="cp-centroCusto" type="text" className="cp-input"
-              value={current.centroCusto ?? ""}
-              onChange={handleText("centroCusto")} />
+          <Field label="Tempo 2" owner="shared" htmlFor="cp-tempoDois"  >
+            <input id="cp-tempoDois" type="text" className="cp-input"
+              value={current.tempoDois ?? ""}
+              onChange={handleText("tempoDois")}
+              placeholder="Ex.: 07/05/2026 23:25:31 | 00:08:21" />
+          </Field>
+          <Field label="Centro de Custo" owner="shared" htmlFor="cp-centroCusto">
+            <select
+              id="cp-centroCusto"
+              className="cp-input cp-select"
+              value={
+                isCentroCustoCatalogado(current.centroCusto)
+                  ? (current.centroCusto ?? "")
+                  : (current.centroCusto ?? "") === ""
+                    ? ""
+                    : "__custom__"
+              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__custom__") return;
+                updateField("centroCusto", v);
+              }}
+            >
+              <option value="">— selecionar —</option>
+              {CENTROS_CUSTO_OPCOES.map((opcao) => (
+                <option key={opcao} value={opcao}>
+                  {opcao}
+                </option>
+              ))}
+              {current.centroCusto &&
+                !isCentroCustoCatalogado(current.centroCusto) && (
+                  <option value="__custom__">
+                    {current.centroCusto} (fora do catálogo)
+                  </option>
+                )}
+            </select>
           </Field>
           <Field
             label="Conta Contábil"
-            owner="luciano"
-            htmlFor="cp-contaContabil"
-            hint="Escolha na lista; o Setor é preenchido automaticamente."
-          >
+            owner="shared"
+            htmlFor="cp-contaContabil">
             <select
               id="cp-contaContabil"
               className="cp-input cp-select"
@@ -662,26 +790,11 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
                 )}
             </select>
           </Field>
-        </div>
-      </section>
-
-      {/* ====== SEÇÃO 4 — COMPARTILHADOS ====== */}
-      <section className="cp-section cp-section-shared">
-        <div className="cp-section-head">
-          <h3 className="cp-section-title">
-            <span className="cp-section-icon">🤝</span> Compartilhados
-          </h3>
-          <p className="cp-section-desc">
-            Preenchidos conforme o andamento do pedido.
-          </p>
-        </div>
-        <div className="cp-grid">
           <Field label="Nº Nota" owner="shared" htmlFor="cp-numeroNota">
             <input id="cp-numeroNota" type="text" className="cp-input"
               value={current.numeroNota ?? ""} onChange={handleText("numeroNota")} />
           </Field>
-          <Field label="Vencimento" owner="shared" htmlFor="cp-vencimento"
-            hint="Texto livre (ex.: dd/mm/aaaa).">
+          <Field label="Vencimento" owner="shared" htmlFor="cp-vencimento">
             <input id="cp-vencimento" type="text" className="cp-input"
               value={current.vencimento ?? ""}
               onChange={handleText("vencimento")}
@@ -698,11 +811,6 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
             label="Setor"
             owner="shared"
             htmlFor="cp-setor"
-            hint={
-              setorOptions.length > 0
-                ? `Catálogo com setores 05–10; ${setorOptions.length} valor(es) na lista (inclui já usados na base).`
-                : "Escolha ou digite o setor — alinhe ao orçamento quando possível."
-            }
           >
             <input
               id="cp-setor"
@@ -720,7 +828,7 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
       {/* ====== FOOTER ====== */}
       {embedded ? (
         <footer className="cp-drawer-footer">
-          <div
+            <div
             className={`cp-autosave-status cp-autosave-${saveStatus}`}
             role="status"
             aria-live="polite"
@@ -745,12 +853,7 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
             {saveStatus === "idle" && !autoSave && dirty && (
               <span className="cp-autosave-hint">Alterações não enviadas — clique em Salvar</span>
             )}
-            {saveStatus === "idle" && !autoSave && !dirty && (
-              <span className="cp-autosave-hint">
-                Use <strong>Salvar</strong> para enviar este pedido ao Dataverse (também se só confirmar o estado atual)
-              </span>
-            )}
-          </div>
+            </div>
           <div className="cp-drawer-footer-actions">
             <button
               type="button"
@@ -776,15 +879,7 @@ export const PedidoForm: React.FC<IPedidoFormProps> = ({
             </button>
           </div>
         </footer>
-      ) : (
-        <footer className="cp-footer" aria-label="Legenda de responsabilidades">
-          <span className="cp-footer-title">Legenda</span>
-          <span className="cp-legend-item"><OwnerBadge owner="auto" /> Dados automáticos</span>
-          <span className="cp-legend-item"><OwnerBadge owner="luciana" /> Tratamento inicial</span>
-          <span className="cp-legend-item"><OwnerBadge owner="luciano" /> Financeiro / Contábil</span>
-          <span className="cp-legend-item"><OwnerBadge owner="shared" /> Compartilhado</span>
-        </footer>
-      )}
+      ) : null}
     </div>
   );
 };

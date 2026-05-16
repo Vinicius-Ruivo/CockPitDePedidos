@@ -95,6 +95,13 @@
     <value>Coluna DATASOLICITACAO — data e hora em que o pedido foi realizado.</value>
   </data>
 
+  <data name="Competencia_DisplayName" xml:space="preserve">
+    <value>Competência</value>
+  </data>
+  <data name="Competencia_Description" xml:space="preserve">
+    <value>Competência mensal no formato MAIO/2026. É preenchida automaticamente pela data da solicitação, mas permanece editável.</value>
+  </data>
+
   <data name="Marca_DisplayName" xml:space="preserve">
     <value>Marca</value>
   </data>
@@ -174,6 +181,12 @@
   <data name="NumeroChamado_Description" xml:space="preserve">
     <value>Número do chamado relacionado ao pedido. Responsabilidade primária: Luciana.</value>
   </data>
+  <data name="TempoUm_DisplayName" xml:space="preserve">
+    <value>Tempo 1</value>
+  </data>
+  <data name="TempoUm_Description" xml:space="preserve">
+    <value>Tempo entre a data da solicitação e o preenchimento do número de chamado (HH:MM:SS).</value>
+  </data>
 
   <data name="Natureza_DisplayName" xml:space="preserve">
     <value>Natureza</value>
@@ -187,6 +200,12 @@
   </data>
   <data name="NumeroRequisicao_Description" xml:space="preserve">
     <value>Número da requisição interna. Responsabilidade primária: Luciana.</value>
+  </data>
+  <data name="TempoDois_DisplayName" xml:space="preserve">
+    <value>Tempo 2</value>
+  </data>
+  <data name="TempoDois_Description" xml:space="preserve">
+    <value>Tempo entre o preenchimento do número de chamado e do número de requisição (HH:MM:SS).</value>
   </data>
 
   <!-- ============================================================ -->

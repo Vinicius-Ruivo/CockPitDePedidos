@@ -21,7 +21,6 @@ export interface IResumoOrcamentoProps {
   pedidos: ReadonlyArray<IPedido>;
   totalOrcamento: number;
   totalRealizado: number;
-  totalSaldo: number;
   canEdit?: boolean;
   readOnlyReason?: string;
   onSaveOrcamentos: (payload: IOrcamentosPayload) => void;
@@ -50,7 +49,7 @@ const formatCurrencyCompact = (n: number): string => {
 /** Cor da barra conforme % consumido (verde → amarelo → vermelho). */
 const percentualColor = (p: number, temOrcamento: boolean): string => {
   if (!temOrcamento) return "var(--owner-auto)";
-  if (p >= 100) return "var(--status-danger, #ef4444)";
+  if (p >= 100) return "var(--cp-status-danger, var(--anim-red))";
   if (p >= 80) return "var(--status-analise-fg)";
   return "var(--status-confirmado-fg)";
 };
@@ -348,7 +347,6 @@ export const ResumoOrcamento: React.FC<IResumoOrcamentoProps> = ({
   pedidos,
   totalOrcamento,
   totalRealizado,
-  totalSaldo: _totalSaldo,
   canEdit = true,
   readOnlyReason,
   onSaveOrcamentos,

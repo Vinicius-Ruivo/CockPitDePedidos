@@ -2,7 +2,7 @@
 <manifest>
   <control namespace="CockpitPedidos"
            constructor="CockpitPedidos"
-           version="1.1.55"
+           version="1.1.97"
            display-name-key="CockpitPedidos_DisplayName"
            description-key="CockpitPedidos_Description"
            control-type="virtual">
@@ -27,6 +27,13 @@
                     display-name-key="DataSolicitacao_DisplayName"
                     description-key="DataSolicitacao_Description"
                     of-type="DateAndTime.DateAndTime"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_competencia"
+                    display-name-key="Competencia_DisplayName"
+                    description-key="Competencia_Description"
+                    of-type="SingleLine.Text"
                     usage="bound"
                     required="false" />
 
@@ -107,6 +114,13 @@
                     usage="bound"
                     required="false" />
 
+      <property-set name="cr660_tempoum"
+                    display-name-key="TempoUm_DisplayName"
+                    description-key="TempoUm_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
       <property-set name="cr660_natureza"
                     display-name-key="Natureza_DisplayName"
                     description-key="Natureza_Description"
@@ -117,6 +131,13 @@
       <property-set name="cr660_numeroderequisicao"
                     display-name-key="NumeroRequisicao_DisplayName"
                     description-key="NumeroRequisicao_Description"
+                    of-type="SingleLine.Text"
+                    usage="bound"
+                    required="false" />
+
+      <property-set name="cr660_tempodois"
+                    display-name-key="TempoDois_DisplayName"
+                    description-key="TempoDois_Description"
                     of-type="SingleLine.Text"
                     usage="bound"
                     required="false" />

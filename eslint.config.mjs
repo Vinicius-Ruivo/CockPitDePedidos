@@ -87,6 +87,15 @@ const projectOverrides = {
     rules: {
         "no-unused-vars": "off",
         "no-empty": ["warn", { allowEmptyCatch: true }],
+        // Padrões legítimos no PCF (React 16): sincronizar UI com props, refs de rascunho, etc.
+        "react-hooks/set-state-in-effect": "off",
+        "react-hooks/immutability": "off",
+        "react-hooks/purity": "off",
+        "react-hooks/refs": "off",
+        "@typescript-eslint/no-unused-vars": [
+            "error",
+            { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+        ],
     },
 };
 

@@ -1,0 +1,59 @@
+/* =============================================================================
+   ÂNIMA EDUCAÇÃO — tokens de marca (manual março 2023)
+   Cores (Pantone → hex) + tipografia web (Roboto / Open Sans).
+   Amsi Pro é proprietária; no PCF usamos a hierarquia web do manual.
+   ============================================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&display=swap");
+
+.cp-dash-root,
+.cp-root {
+  /* Paleta oficial */
+  --anim-purple: #5b2d82;
+  --anim-magenta: #b51e84;
+  --anim-blue: #42b4e4;
+  --anim-green: #6fbf4a;
+  --anim-orange: #f58220;
+  --anim-teal: #00b4aa;
+  --anim-yellow: #f4e501;
+  --anim-red: #f0483e;
+  --anim-pink: #e84683;
+
+  /* Derivados de layout */
+  --anim-purple-deep: #3f2259;
+  --anim-bg-dark: #1a0f26;
+  --anim-neutral: #9aa0a6;
+
+  /* Tipografia (manual: Roboto → Open Sans → Helvetica → Arial) */
+  --cp-font-sans: Roboto, "Open Sans", Helvetica, Arial, sans-serif;
+  --cp-font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  --cp-font-weight-body: 400;
+  --cp-font-weight-medium: 500;
+  --cp-font-weight-title: 700;
+
+  font-family: var(--cp-font-sans);
+  font-weight: var(--cp-font-weight-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Títulos e destaques — Bold/Black do manual */
+.cp-dash-root .cp-dash-panel-title,
+.cp-dash-root .cp-dash-header-eyebrow,
+.cp-dash-root .cp-chart-kpi-value,
+.cp-dash-root .cp-resumo-total-value,
+.cp-root .cp-section-title,
+.cp-root .cp-summary-supplier {
+  font-weight: var(--cp-font-weight-title);
+  letter-spacing: -0.02em;
+}
+
+/* Rótulos em caixa alta */
+.cp-dash-root .cp-dash-metric-label,
+.cp-dash-root .cp-dash-agg-filter-label,
+.cp-dash-root .cp-chart-kpi-label,
+.cp-dash-root .cp-chart-period-label {
+  font-weight: var(--cp-font-weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

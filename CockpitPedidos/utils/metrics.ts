@@ -494,11 +494,6 @@ export function totaisProjecao(
   };
 }
 
-/** Só o mapa por setor (legado) — gera o novo JSON com `contas` vazio. */
-export function serializeOrcamentosJson(map: OrcamentosMap): string {
-  return serializeOrcamentosPayload({ setores: map, contas: {} });
-}
-
 /** Formato canônico na saída: `setores` + `contas` (sempre números no JSON). */
 export function serializeOrcamentosPayload(p: IOrcamentosPayload): string {
   const setores: Record<string, number> = {};

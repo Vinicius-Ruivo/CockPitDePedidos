@@ -1,5 +1,7 @@
 # Cockpit de Pedidos de Compra — PCF (Power Apps Component Framework)
 
+**Modelo base validado:** PCF **v1.1.97** — documentação canónica em [`docs/REFERENCIA-COCKPIT-ESTADO-BASE.md`](docs/REFERENCIA-COCKPIT-ESTADO-BASE.md) (fluxo Canvas, Power Fx, checklist pós-deploy).
+
 Componente PCF **virtual (React + TypeScript)** do tipo **dataset control**,
 empacotado para importar em um **Canvas App do Microsoft Power Apps**.
 Apresenta um dashboard com cards de pedidos, resumo orçamentário por setor e

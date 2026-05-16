@@ -7,7 +7,6 @@ import {
   agregarPorSetor,
   agregarPorStatus,
   mesesDisponiveisParaGrafico,
-  mesISOCompacto,
   mesISOLabel,
   mesISOAtual,
   orcamentoContaPorMesNaFaixa,
@@ -17,6 +16,14 @@ import {
   totaisProjecao,
 } from "../utils/metrics";
 import { findSetorBySubcategoria, getSubcategoriasParaSetor, setorLabelExibicao, SETOR_LABELS_CANONICOS } from "../constants/setoresOrganizacao";
+import {
+  ChartBarGradientDefs,
+  ChartBarGradKey,
+  chartBarFill,
+  chartBarLegendBg,
+  chartBarLegendBgH,
+  statusBarFill,
+} from "../utils/chartBarGradients";
 
 export interface IGraficosBarrasProps {
   pedidos: ReadonlyArray<IPedido>;
@@ -24,6 +31,49 @@ export interface IGraficosBarrasProps {
   historicoOrcamentos: IHistoricoOrcamentos;
   /** Quando o Dashboard está filtrado por um mês, a análise acompanha esse mês. */
   mesTravado?: MesISO;
+  /**
+   * Incrementa cada vez que o painel «Análise de orçamento» abre — dispara animação
+   * das barras de cima para baixo (após o slide do painel).
+   */
+  barGrowEpoch?: number;
+}
+
+/** Alinhado à transição do painel (.cp-dash-graficos-expand-inner ≈ 0,82s). */
+const BAR_GROW_PANEL_MS = 860;
+/** Duração de cada barra (deve coincidir com Dashboard.css). */
+const BAR_GROW_DURATION_MS = 4000;
+/** Intervalo entre colunas — esquerda → direita (gi). */
+const BAR_GROW_STAGGER_MS = 420;
+
+export interface IChartBarGrowAnim {
+  active: boolean;
+  styleForBar: (gi: number, si?: number) => React.CSSProperties | undefined;
+}
+
+export function useChartBarGrow(barGrowEpoch = 0): IChartBarGrowAnim {
+  const [active, setActive] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!barGrowEpoch) return;
+    setActive(false);
+    const t = window.setTimeout(() => setActive(true), BAR_GROW_PANEL_MS);
+    return () => window.clearTimeout(t);
+  }, [barGrowEpoch]);
+
+  const styleForBar = React.useCallback(
+    (gi: number, _si = 0): React.CSSProperties | undefined => {
+      void _si;
+      if (!active) return undefined;
+      // Mesmo atraso para todas as barras da mesma coluna (só gi define a ordem L→R).
+      return {
+        animationDelay: `${gi * BAR_GROW_STAGGER_MS}ms`,
+        animationDuration: `${BAR_GROW_DURATION_MS}ms`,
+      };
+    },
+    [active],
+  );
+
+  return { active, styleForBar };
 }
 
 interface IMetricOption {
@@ -102,6 +152,16 @@ const formatCurrencyCompact = (n: number): string => {
   return `R$ ${n.toFixed(0)}`;
 };
 
+/** Rótulo acima da barra — só o valor (eixo e KPIs mantêm R$). */
+const formatBarValueCompact = (n: number): string => {
+  if (!Number.isFinite(n)) return "0";
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(1)}k`;
+  return `${sign}${abs.toFixed(0)}`;
+};
+
 const formatPct = (n: number, digits: number = 1): string => {
   if (!Number.isFinite(n)) return "0%";
   return `${n.toFixed(digits)}%`;
@@ -128,29 +188,6 @@ const buildTicks = (max: number, target: number = 4): number[] => {
     if (ticks.length > 12) break;
   }
   return ticks;
-};
-
-// =============================================================================
-// Cores — ligadas ao tema via CSS vars.
-// =============================================================================
-
-const COLORS = {
-  orcamento: "#9aa0a6",
-  realizado: "#22c55e",
-  saldo: "#06b6d4",
-  saldoNeg: "#ef4444",
-  emAnalise: "#f59e0b",
-  novo: "#7c5cff",
-  alert: "#ef4444",
-  accent: "#7c5cff",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  novo: COLORS.novo,
-  "em análise": COLORS.emAnalise,
-  "em analise": COLORS.emAnalise,
-  confirmado: COLORS.realizado,
-  cancelado: "#9aa0a6",
 };
 
 // =============================================================================
@@ -352,12 +389,13 @@ const KpiStrip: React.FC<{
 // =============================================================================
 
 interface IGroupedBarsProps {
+  barGrow?: IChartBarGrowAnim;
   setores: ReadonlyArray<ISetorAggregate>;
   /** Quais valores extrair de cada agregado. */
   series: ReadonlyArray<{
     key: keyof ISetorAggregate;
     label: string;
-    color: string;
+    gradKey: ChartBarGradKey;
     /** Quando true (saldo), valores negativos viram vermelho e usam |valor| no eixo. */
     signed?: boolean;
   }>;
@@ -479,6 +517,7 @@ function OrcamentoMesDividerLines(props: {
 }
 
 const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
+  barGrow,
   setores,
   series,
   orcamentoPorMesPorRotulo,
@@ -517,13 +556,15 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
   const barGap = (groupInnerW - barW * series.length) / (series.length + 1);
 
   return (
-    <div className="cp-chart-svg-wrap">
+    <div
+      className={`cp-chart-svg-wrap${barGrow?.active ? " cp-chart-svg-wrap--bar-grow" : ""}`}
+    >
       <div className="cp-chart-legend">
         {series.map((s) => (
           <span key={s.key as string} className="cp-chart-legend-item">
             <span
               className="cp-chart-sw"
-              style={{ background: s.color }}
+              style={{ background: chartBarLegendBg(s.gradKey) }}
               aria-hidden="true"
             />
             {s.label}
@@ -553,6 +594,7 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
           role="img"
           aria-label={ariaLabel}
         >
+          <ChartBarGradientDefs />
           {/* Grade horizontal + eixo Y */}
           {ticks.map((t) => (
             <g key={`tick-${t}`}>
@@ -603,7 +645,7 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
                   const h = yMax > 0 ? (v / yMax) * innerH : 0;
                   const x = gx + barGap + si * (barW + barGap);
                   const y = HEIGHT - PADDING.bottom - h;
-                  const fill = isNeg ? COLORS.saldoNeg : s.color;
+                  const fill = chartBarFill(isNeg ? "saldoNeg" : s.gradKey);
                   return (
                     <g key={s.key as string}>
                       <rect
@@ -615,6 +657,7 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
                         ry={3}
                         fill={fill}
                         className="cp-chart-svg-bar"
+                        style={barGrow?.styleForBar(gi, si)}
                       >
                         <title>
                           {`${rotuloSetor}\n${s.label}: ${formatBRL(raw)}`}
@@ -637,7 +680,7 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
                           textAnchor="middle"
                           className={`cp-chart-bar-label${isNeg ? " cp-chart-bar-label--neg" : ""}`}
                         >
-                          {formatCurrencyCompact(raw)}
+                          {formatBarValueCompact(raw)}
                         </text>
                       )}
                     </g>
@@ -675,6 +718,7 @@ const GroupedBarsSvg: React.FC<IGroupedBarsProps> = ({
 // =============================================================================
 
 const ProjecaoBarsSvg: React.FC<{
+  barGrow?: IChartBarGrowAnim;
   setores: ReadonlyArray<ISetorAggregate>;
   orcamentoPorMesPorRotulo?: ReadonlyMap<
     string,
@@ -684,6 +728,7 @@ const ProjecaoBarsSvg: React.FC<{
   xLabelMax?: number;
   ariaLabel?: string;
 }> = ({
+  barGrow,
   setores,
   orcamentoPorMesPorRotulo,
   emptyMessage = "Sem setores cadastrados ainda.",
@@ -723,26 +768,28 @@ const ProjecaoBarsSvg: React.FC<{
   const barGap = (groupInnerW - barW * 3) / 4;
 
   return (
-    <div className="cp-chart-svg-wrap">
+    <div
+      className={`cp-chart-svg-wrap${barGrow?.active ? " cp-chart-svg-wrap--bar-grow" : ""}`}
+    >
       <div className="cp-chart-legend">
         <span className="cp-chart-legend-item">
-          <span className="cp-chart-sw" style={{ background: COLORS.orcamento }} aria-hidden="true" />
+          <span className="cp-chart-sw" style={{ background: chartBarLegendBg("orcamento") }} aria-hidden="true" />
           Orçamento
         </span>
         <span className="cp-chart-legend-item">
-          <span className="cp-chart-sw" style={{ background: COLORS.realizado }} aria-hidden="true" />
+          <span className="cp-chart-sw" style={{ background: chartBarLegendBg("realizado") }} aria-hidden="true" />
           Realizado (Confirmado)
         </span>
         <span className="cp-chart-legend-item">
-          <span className="cp-chart-sw" style={{ background: COLORS.emAnalise }} aria-hidden="true" />
+          <span className="cp-chart-sw" style={{ background: chartBarLegendBg("emAnalise") }} aria-hidden="true" />
           Em Análise
         </span>
         <span className="cp-chart-legend-item">
-          <span className="cp-chart-sw" style={{ background: COLORS.novo }} aria-hidden="true" />
+          <span className="cp-chart-sw" style={{ background: chartBarLegendBg("novo") }} aria-hidden="true" />
           Novo
         </span>
         <span className="cp-chart-legend-item">
-          <span className="cp-chart-sw" style={{ background: COLORS.saldo }} aria-hidden="true" />
+          <span className="cp-chart-sw" style={{ background: chartBarLegendBg("saldo") }} aria-hidden="true" />
           Saldo Projetado
         </span>
         {orcamentoPorMesPorRotulo && (
@@ -769,6 +816,7 @@ const ProjecaoBarsSvg: React.FC<{
           role="img"
           aria-label={ariaLabel}
         >
+          <ChartBarGradientDefs />
           {ticks.map((t) => (
             <g key={`tick-${t}`}>
               <line
@@ -809,11 +857,13 @@ const ProjecaoBarsSvg: React.FC<{
             // Barra 2 — Comprometido (empilhado: Realizado / EmAnálise / Novo)
             const x2 = x1 + barW + barGap;
             // Cada segmento é proporcional ao seu valor; topo da barra = comprometido.
-            const segs = [
-              { k: "real", v: d.realizado, color: COLORS.realizado, label: "Realizado" },
-              { k: "anal", v: d.emAnalise, color: COLORS.emAnalise, label: "Em Análise" },
-              { k: "novo", v: d.novo, color: COLORS.novo, label: "Novo" },
-            ].filter((s) => s.v > 0);
+            const segs = (
+              [
+                { k: "real", v: d.realizado, gradKey: "realizado" as const, label: "Realizado" },
+                { k: "anal", v: d.emAnalise, gradKey: "emAnalise" as const, label: "Em Análise" },
+                { k: "novo", v: d.novo, gradKey: "novo" as const, label: "Novo" },
+              ] as const
+            ).filter((s) => s.v > 0);
             const hCompr = (d.comprometido / yMax) * innerH;
             const yComprTop = HEIGHT - PADDING.bottom - hCompr;
             const stackOverflow = d.orcamento > 0 && d.comprometido > d.orcamento;
@@ -823,7 +873,7 @@ const ProjecaoBarsSvg: React.FC<{
             const sp = d.saldoProjetado;
             const h3 = (Math.abs(sp) / yMax) * innerH;
             const y3 = HEIGHT - PADDING.bottom - h3;
-            const c3 = sp < 0 ? COLORS.saldoNeg : COLORS.saldo;
+            const fillSaldo = chartBarFill(sp < 0 ? "saldoNeg" : "saldo");
 
             // Linha de referência do orçamento dentro do grupo (auxilia leitura)
             const showOrcLine = d.orcamento > 0;
@@ -846,9 +896,10 @@ const ProjecaoBarsSvg: React.FC<{
                   height={Math.max(1, h1)}
                   rx={3}
                   ry={3}
-                  fill={COLORS.orcamento}
-                  opacity={0.85}
+                  fill={chartBarFill("orcamento")}
+                  opacity={0.92}
                   className="cp-chart-svg-bar"
+                  style={barGrow?.styleForBar(gi, 0)}
                 >
                   <title>{`${rotuloSetor}\nOrçamento: ${formatBRL(d.orcamento)}`}</title>
                 </rect>
@@ -874,10 +925,11 @@ const ProjecaoBarsSvg: React.FC<{
                         y={yTop}
                         width={barW}
                         height={Math.max(1, segH)}
-                        fill={s.color}
+                        fill={chartBarFill(s.gradKey)}
                         rx={idx === segs.length - 1 ? 3 : 0}
                         ry={idx === segs.length - 1 ? 3 : 0}
                         className="cp-chart-svg-bar"
+                        style={barGrow?.styleForBar(gi, 1 + idx)}
                       >
                         <title>{`${rotuloSetor}\n${s.label}: ${formatBRL(s.v)}`}</title>
                       </rect>
@@ -904,7 +956,7 @@ const ProjecaoBarsSvg: React.FC<{
                     textAnchor="middle"
                     className={`cp-chart-bar-label${stackOverflow ? " cp-chart-bar-label--neg" : ""}`}
                   >
-                    {formatCurrencyCompact(d.comprometido)}
+                    {formatBarValueCompact(d.comprometido)}
                     {stackOverflow ? " ⚠" : ""}
                   </text>
                 )}
@@ -917,8 +969,9 @@ const ProjecaoBarsSvg: React.FC<{
                   height={Math.max(1, h3)}
                   rx={3}
                   ry={3}
-                  fill={c3}
+                  fill={fillSaldo}
                   className="cp-chart-svg-bar"
+                  style={barGrow?.styleForBar(gi, 2)}
                 >
                   <title>{`${rotuloSetor}\nSaldo Projetado: ${formatBRL(sp)}${sp < 0 ? "  (excede orçamento)" : ""}`}</title>
                 </rect>
@@ -929,7 +982,7 @@ const ProjecaoBarsSvg: React.FC<{
                     textAnchor="middle"
                     className={`cp-chart-bar-label${sp < 0 ? " cp-chart-bar-label--neg" : ""}`}
                   >
-                    {formatCurrencyCompact(sp)}
+                    {formatBarValueCompact(sp)}
                   </text>
                 )}
 
@@ -976,9 +1029,10 @@ const ProjecaoBarsSvg: React.FC<{
 // Subgráfico 3: Pedidos por Status (vertical bars, agora SVG)
 // =============================================================================
 
-const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
-  pedidos,
-}) => {
+const StatusBarsSvg: React.FC<{
+  pedidos: ReadonlyArray<IPedido>;
+  barGrow?: IChartBarGrowAnim;
+}> = ({ pedidos, barGrow }) => {
   const [hoverGi, setHoverGi] = React.useState<number | null>(null);
 
   const dados = React.useMemo(
@@ -1004,7 +1058,9 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
   const barW = Math.min(60, groupInnerW - 16);
 
   return (
-    <div className="cp-chart-svg-wrap">
+    <div
+      className={`cp-chart-svg-wrap${barGrow?.active ? " cp-chart-svg-wrap--bar-grow" : ""}`}
+    >
       <div
         className="cp-chart-svg-scroll"
         role="region"
@@ -1021,6 +1077,7 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
           role="img"
           aria-label="Pedidos por status"
         >
+          <ChartBarGradientDefs />
           {ticks.map((t) => (
             <g key={`tick-${t}`}>
               <line
@@ -1051,8 +1108,7 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 
           {dados.map((d, gi) => {
             const gx = xFor(gi);
-            const cor =
-              STATUS_COLORS[d.status.toLowerCase()] ?? COLORS.accent;
+            const cor = statusBarFill(d.status);
             const h = (d.quantidade / yMax) * innerH;
             const x = gx + (groupInnerW - barW) / 2 + 6;
             const y = HEIGHT - PADDING.bottom - h;
@@ -1075,6 +1131,7 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
                   ry={4}
                   fill={cor}
                   className="cp-chart-svg-bar"
+                  style={barGrow?.styleForBar(gi, 0)}
                 >
                   <title>{`${d.status}\n${d.quantidade} pedidos · ${formatBRL(d.valorTotal)}`}</title>
                 </rect>
@@ -1116,9 +1173,10 @@ const StatusBarsSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 // Subgráfico 4: Evolução mensal — barras + linha cumulativa
 // =============================================================================
 
-const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
-  pedidos,
-}) => {
+const EvolucaoSvg: React.FC<{
+  pedidos: ReadonlyArray<IPedido>;
+  barGrow?: IChartBarGrowAnim;
+}> = ({ pedidos, barGrow }) => {
   const [hoverGi, setHoverGi] = React.useState<number | null>(null);
 
   const dados = React.useMemo(
@@ -1146,22 +1204,29 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
   const barW = Math.min(40, groupInnerW - 12);
 
   // Linha cumulativa (acumulado mês a mês — útil para enxergar a tendência)
-  let cumul = 0;
-  const cumulPoints = dados.map((d, gi) => {
-    cumul += d.valorTotal;
-    const x = xFor(gi) + groupInnerW / 2 + 6;
-    return { x, y: yFor(Math.min(cumul, yMax)), cumul };
-  });
+  const cumulAcc = dados.reduce<{ points: { x: number; y: number; cumul: number }[]; cumul: number }>(
+    (acc, d, gi) => {
+      const cumul = acc.cumul + d.valorTotal;
+      const x = xFor(gi) + groupInnerW / 2 + 6;
+      acc.points.push({ x, y: yFor(Math.min(cumul, yMax)), cumul });
+      acc.cumul = cumul;
+      return acc;
+    },
+    { points: [], cumul: 0 },
+  );
+  const cumulPoints = cumulAcc.points;
   const cumulPath = cumulPoints
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
     .join(" ");
-  const cumulMax = cumul; // total geral
+  const cumulMax = cumulAcc.cumul;
 
   return (
-    <div className="cp-chart-svg-wrap">
+    <div
+      className={`cp-chart-svg-wrap${barGrow?.active ? " cp-chart-svg-wrap--bar-grow" : ""}`}
+    >
       <div className="cp-chart-legend">
         <span className="cp-chart-legend-item">
-          <span className="cp-chart-sw" style={{ background: COLORS.accent }} aria-hidden="true" />
+          <span className="cp-chart-sw" style={{ background: chartBarLegendBg("accent") }} aria-hidden="true" />
           Valor do mês
         </span>
         <span className="cp-chart-legend-item">
@@ -1185,6 +1250,7 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
           role="img"
           aria-label="Evolução mensal"
         >
+          <ChartBarGradientDefs />
           {ticks.map((t) => (
             <g key={`tick-${t}`}>
               <line
@@ -1235,9 +1301,10 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
                   height={Math.max(1, h)}
                   rx={3}
                   ry={3}
-                  fill={COLORS.accent}
-                  opacity={0.92}
+                  fill={chartBarFill("accent")}
+                  opacity={0.95}
                   className="cp-chart-svg-bar"
+                  style={barGrow?.styleForBar(gi, 0)}
                 >
                   <title>{`${d.mesLabel}\n${d.qtd} pedidos · ${formatBRL(d.valorTotal)}`}</title>
                 </rect>
@@ -1248,7 +1315,7 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
                     textAnchor="middle"
                     className="cp-chart-bar-label"
                   >
-                    {formatCurrencyCompact(d.valorTotal)}
+                    {formatBarValueCompact(d.valorTotal)}
                   </text>
                 )}
                 <text
@@ -1308,9 +1375,10 @@ const EvolucaoSvg: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
 // Subgráfico: Por fornecedor — barras horizontais (largura ∝ valor total)
 // =============================================================================
 
-const FornecedorHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
-  pedidos,
-}) => {
+const FornecedorHBars: React.FC<{
+  pedidos: ReadonlyArray<IPedido>;
+  barGrow?: IChartBarGrowAnim;
+}> = ({ pedidos, barGrow }) => {
   const dados = React.useMemo(
     () => agregarPorFornecedor(pedidos as IPedido[]),
     [pedidos],
@@ -1320,8 +1388,8 @@ const FornecedorHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
   const maxValor = Math.max(...dados.map((d) => d.valorTotal), 1);
 
   return (
-    <div className="cp-chart-hbars">
-      {dados.map((d) => {
+    <div className={`cp-chart-hbars${barGrow?.active ? " cp-chart-hbars--bar-grow" : ""}`}>
+      {dados.map((d, gi) => {
         const pct = (d.valorTotal / maxValor) * 100;
         return (
           <div key={d.fornecedor} className="cp-chart-hbar-row">
@@ -1331,7 +1399,11 @@ const FornecedorHBars: React.FC<{ pedidos: ReadonlyArray<IPedido> }> = ({
             <div className="cp-chart-hbar-track">
               <div
                 className="cp-chart-hbar-fill"
-                style={{ width: `${pct}%`, background: COLORS.accent }}
+                style={{
+                  width: `${pct}%`,
+                  background: chartBarLegendBgH("accent"),
+                  ...barGrow?.styleForBar(gi, 0),
+                }}
               />
               <span className="cp-chart-hbar-text">
                 {formatBRL(d.valorTotal)} · {d.quantidade} pedido
@@ -1353,7 +1425,9 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
   pedidos,
   historicoOrcamentos,
   mesTravado,
+  barGrowEpoch = 0,
 }) => {
+  const barGrow = useChartBarGrow(barGrowEpoch);
   const [metric, setMetric] = React.useState<ChartMetric>("orcamento-vs-realizado");
   // Conjunto vazio = "Todos os setores".
   const [setoresFoco, setSetoresFoco] = React.useState<Set<string>>(new Set());
@@ -1537,47 +1611,6 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
 
   return (
     <div className="cp-chart">
-      <div className="cp-chart-period" role="group" aria-label="Período da análise">
-        <div className="cp-chart-period-head">
-          <span className="cp-chart-period-title">Período da análise</span>
-          <span className="cp-chart-period-hint">
-            Orçamento = soma dos meses no histórico; valores realizados = pedidos com data no intervalo.
-          </span>
-        </div>
-        <div className="cp-chart-period-controls">
-          <label className="cp-chart-period-field">
-            <span className="cp-chart-period-label">De</span>
-            <select
-              className="cp-chart-period-select"
-              value={mesDe}
-              onChange={onChangeMesDe}
-              aria-label="Mês inicial"
-            >
-              {opcoesMeses.map((m) => (
-                <option key={m} value={m}>
-                  {mesISOLabel(m)} ({m})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="cp-chart-period-field">
-            <span className="cp-chart-period-label">Até</span>
-            <select
-              className="cp-chart-period-select"
-              value={mesAte}
-              onChange={onChangeMesAte}
-              aria-label="Mês final"
-            >
-              {opcoesMeses.map((m) => (
-                <option key={`ate-${m}`} value={m}>
-                  {mesISOLabel(m)} ({m})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
-
       <KpiStrip pedidos={pedidosVisiveis} orcamentos={orcamentosVisiveis.setores} />
 
       <ChipFiltroSetor
@@ -1608,34 +1641,73 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
             </button>
           ))}
         </div>
-        <div className="cp-chart-head-desc">{current.description}</div>
+        <div className="cp-chart-head-side">
+          <div className="cp-chart-head-desc">{current.description}</div>
+          <div className="cp-chart-period cp-chart-period--inline" role="group" aria-label="Período da análise">
+            <div className="cp-chart-period-controls">
+              <label className="cp-chart-period-field">
+                <span className="cp-chart-period-label">De</span>
+                <select
+                  className="cp-chart-period-select"
+                  value={mesDe}
+                  onChange={onChangeMesDe}
+                  aria-label="Mês inicial"
+                >
+                  {opcoesMeses.map((m) => (
+                    <option key={m} value={m}>
+                      {mesISOLabel(m)} ({m})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="cp-chart-period-field">
+                <span className="cp-chart-period-label">Até</span>
+                <select
+                  className="cp-chart-period-select"
+                  value={mesAte}
+                  onChange={onChangeMesAte}
+                  aria-label="Mês final"
+                >
+                  {opcoesMeses.map((m) => (
+                    <option key={`ate-${m}`} value={m}>
+                      {mesISOLabel(m)} ({m})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="cp-chart-body">
         {metric === "orcamento-vs-realizado" && (
           <GroupedBarsSvg
+            barGrow={barGrow}
             setores={agregadosVisiveis}
             series={[
-              { key: "orcamento", label: "Orçamento", color: COLORS.orcamento },
-              { key: "realizado", label: "Realizado", color: COLORS.realizado },
-              { key: "saldo", label: "Saldo", color: COLORS.saldo, signed: true },
+              { key: "orcamento", label: "Orçamento", gradKey: "orcamento" },
+              { key: "realizado", label: "Realizado", gradKey: "realizado" },
+              { key: "saldo", label: "Saldo", gradKey: "saldo", signed: true },
             ]}
             orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloSetor}
           />
         )}
         {metric === "orcamento-vs-projetado" && (
           <ProjecaoBarsSvg
+            barGrow={barGrow}
             setores={agregadosVisiveis}
             orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloSetor}
           />
         )}
         {metric === "orcamento-vs-realizado-contas" && (
           <GroupedBarsSvg
+            barGrow={barGrow}
             setores={agregadosConta}
             series={[
-              { key: "orcamento", label: "Orçamento", color: COLORS.orcamento },
-              { key: "realizado", label: "Realizado", color: COLORS.realizado },
-              { key: "saldo", label: "Saldo", color: COLORS.saldo, signed: true },
+              { key: "orcamento", label: "Orçamento", gradKey: "orcamento" },
+              { key: "realizado", label: "Realizado", gradKey: "realizado" },
+              { key: "saldo", label: "Saldo", gradKey: "saldo", signed: true },
             ]}
             emptyMessage="Nenhuma conta contábil nos pedidos nem no orçamento."
             xLabelMax={22}
@@ -1645,6 +1717,7 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
         )}
         {metric === "orcamento-vs-projetado-contas" && (
           <ProjecaoBarsSvg
+            barGrow={barGrow}
             setores={agregadosConta}
             emptyMessage="Nenhuma conta contábil nos pedidos nem no orçamento."
             xLabelMax={22}
@@ -1652,10 +1725,14 @@ export const GraficosBarras: React.FC<IGraficosBarrasProps> = ({
             orcamentoPorMesPorRotulo={orcamentoPorMesPorRotuloConta}
           />
         )}
-        {metric === "qtd-por-status" && <StatusBarsSvg pedidos={pedidosVisiveis} />}
-        {metric === "evolucao-mensal" && <EvolucaoSvg pedidos={pedidosVisiveis} />}
+        {metric === "qtd-por-status" && (
+          <StatusBarsSvg pedidos={pedidosVisiveis} barGrow={barGrow} />
+        )}
+        {metric === "evolucao-mensal" && (
+          <EvolucaoSvg pedidos={pedidosVisiveis} barGrow={barGrow} />
+        )}
         {metric === "qtd-por-fornecedor" && (
-          <FornecedorHBars pedidos={pedidosVisiveis} />
+          <FornecedorHBars pedidos={pedidosVisiveis} barGrow={barGrow} />
         )}
       </div>
     </div>

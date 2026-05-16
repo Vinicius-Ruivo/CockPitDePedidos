@@ -1,6 +1,13 @@
 import * as React from "react";
 import { setorLabelExibicao } from "../constants/setoresOrganizacao";
+import {
+  PieSliceGradientDefs,
+  pieSliceFill,
+  pieSliceLegendBg,
+} from "../utils/chartBarGradients";
 import { ISubcategoriaAggregate } from "../types";
+
+let pieRevealClipSeq = 0;
 
 export interface IPieChartSubcategoriasProps {
   setor: string;
@@ -39,29 +46,12 @@ const formatPctDisplay = (ratio: number, fractionDigits: number = 1): string => 
 const truncatePieCenter = (s: string, max: number): string =>
   s.length > max ? s.slice(0, max - 1) + "…" : s;
 
-/** Paleta de cores estável (um índice = uma cor) — boa contrast em fundo escuro/claro. */
-const PALETTE = [
-  "#7c5cff", // roxo (cor de marca do app)
-  "#22c55e", // verde
-  "#f59e0b", // âmbar
-  "#ef4444", // vermelho
-  "#06b6d4", // ciano
-  "#ec4899", // rosa
-  "#84cc16", // lima
-  "#a855f7", // violeta
-  "#f97316", // laranja
-  "#14b8a6", // teal
-  "#eab308", // amarelo
-  "#3b82f6", // azul
-];
-
-const colorFor = (i: number): string => PALETTE[i % PALETTE.length];
-
 interface ISlice {
   agg: ISubcategoriaAggregate;
   start: number;
   end: number;
-  color: string;
+  /** Índice na paleta (cor base + gradiente SVG). */
+  sliceIndex: number;
   pct: number;
 }
 
@@ -112,6 +102,33 @@ const polar = (cx: number, cy: number, r: number, angle: number) => ({
   y: cy + r * Math.sin(angle),
 });
 
+/**
+ * Anel completo (100% numa fatia). Um único arco SVG de 360° degenera
+ * (início = fim) e a fatia não aparece — usamos dois semicírculos.
+ */
+const fullDonutPath = (
+  cx: number,
+  cy: number,
+  rOuter: number,
+  rInner: number,
+  startAngle: number,
+): string => {
+  const mid = startAngle + Math.PI;
+  const pOut0 = polar(cx, cy, rOuter, startAngle);
+  const pOut1 = polar(cx, cy, rOuter, mid);
+  const pIn0 = polar(cx, cy, rInner, startAngle);
+  const pIn1 = polar(cx, cy, rInner, mid);
+  return [
+    `M ${pOut0.x} ${pOut0.y}`,
+    `A ${rOuter} ${rOuter} 0 1 1 ${pOut1.x} ${pOut1.y}`,
+    `A ${rOuter} ${rOuter} 0 1 1 ${pOut0.x} ${pOut0.y}`,
+    `L ${pIn0.x} ${pIn0.y}`,
+    `A ${rInner} ${rInner} 0 1 0 ${pIn1.x} ${pIn1.y}`,
+    `A ${rInner} ${rInner} 0 1 0 ${pIn0.x} ${pIn0.y}`,
+    "Z",
+  ].join(" ");
+};
+
 /** Path SVG de uma fatia de donut (anel) entre dois ângulos. */
 const arcPath = (
   cx: number,
@@ -121,7 +138,13 @@ const arcPath = (
   start: number,
   end: number,
 ): string => {
-  const largeArc = end - start > Math.PI ? 1 : 0;
+  let sweep = end - start;
+  while (sweep <= 0) sweep += TAU;
+  if (sweep >= TAU - 1e-6) {
+    return fullDonutPath(cx, cy, rOuter, rInner, start);
+  }
+
+  const largeArc = sweep > Math.PI ? 1 : 0;
   const p1 = polar(cx, cy, rOuter, start);
   const p2 = polar(cx, cy, rOuter, end);
   const p3 = polar(cx, cy, rInner, end);
@@ -140,7 +163,65 @@ const PIE_SIZE = 280;
 const PIE_CX = PIE_SIZE / 2;
 const PIE_CY = PIE_SIZE / 2;
 const PIE_R_OUT = 120;
-const PIE_R_IN = 70;
+const PIE_R_IN = 52;
+/** Início da rosca e da revelação: topo (12h), sentido horário. */
+const PIE_ANGLE_TOP = -Math.PI / 2;
+/** Duração da revelação horária ao abrir o modal (uma vez por abertura). */
+const PIE_REVEAL_MS = 2400;
+
+/** Setor em forma de fatia que cresce no sentido horário a partir do topo. */
+const revealWedgePath = (
+  cx: number,
+  cy: number,
+  r: number,
+  sweepRadians: number,
+): string => {
+  if (sweepRadians < 1e-4) {
+    return `M ${cx} ${cy} L ${cx} ${cy} Z`;
+  }
+  const sweep = Math.min(sweepRadians, TAU - 1e-5);
+  const p0 = polar(cx, cy, r, PIE_ANGLE_TOP);
+  const endAngle = PIE_ANGLE_TOP + sweep;
+  const p1 = polar(cx, cy, r, endAngle);
+  const largeArc = sweep > Math.PI ? 1 : 0;
+  return [
+    `M ${cx} ${cy}`,
+    `L ${p0.x} ${p0.y}`,
+    `A ${r} ${r} 0 ${largeArc} 1 ${p1.x} ${p1.y}`,
+    "Z",
+  ].join(" ");
+};
+
+/** Anima 0 → 2π no mount; ao fechar o modal o componente desmonta e reabre do zero. */
+function usePieRevealSweep(): number {
+  const [sweep, setSweep] = React.useState(0);
+
+  React.useEffect(() => {
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setSweep(TAU);
+      return;
+    }
+
+    setSweep(0);
+    let start: number | null = null;
+    let raf = 0;
+    const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+
+    const tick = (ts: number) => {
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / PIE_REVEAL_MS);
+      setSweep(easeOutCubic(t) * TAU);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return sweep;
+}
 
 export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
   setor,
@@ -159,15 +240,18 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
     [slicesBase],
   );
 
+  const revealSweep = usePieRevealSweep();
+  const revealClipId = React.useMemo(() => `cp-pie-reveal-${++pieRevealClipSeq}`, []);
+
   const slices: ISlice[] = React.useMemo(() => {
     if (total <= 0) return [];
-    let acc = -Math.PI / 2; // começa no topo (12h)
+    let acc = PIE_ANGLE_TOP;
     return slicesBase.map((agg, i) => {
       const pct = agg.total / total;
       const start = acc;
       const end = acc + pct * TAU;
       acc = end;
-      return { agg, start, end, color: colorFor(i), pct };
+      return { agg, start, end, sliceIndex: i, pct };
     });
   }, [slicesBase, total]);
 
@@ -312,6 +396,25 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                   role="img"
                   aria-label="Gráfico de pizza por conta contábil"
                 >
+                <defs>
+                  <clipPath id={revealClipId} clipPathUnits="userSpaceOnUse">
+                    <path
+                      d={revealWedgePath(
+                        PIE_CX,
+                        PIE_CY,
+                        PIE_R_OUT + 16,
+                        revealSweep,
+                      )}
+                    />
+                  </clipPath>
+                  <PieSliceGradientDefs
+                    slices={slices}
+                    cx={PIE_CX}
+                    cy={PIE_CY}
+                    rIn={PIE_R_IN}
+                    rOut={PIE_R_OUT}
+                  />
+                </defs>
                 {/*
                   Texto central por baixo das fatias + pointer-events: none.
                   Com hover: nome da conta + % em destaque; sem hover: total geral.
@@ -359,7 +462,7 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                     </text>
                   </>
                 )}
-                <g className="cp-pie-slices">
+                <g className="cp-pie-slices" clipPath={`url(#${revealClipId})`}>
                   {slices.map((s, i) => {
                     const isHover = hoverIdx === i;
                     // Pequeno deslocamento radial no hover para destacar a fatia.
@@ -371,7 +474,7 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
                         key={s.agg.subcategoria}
                         className="cp-pie-slice"
                         d={arcPath(PIE_CX, PIE_CY, PIE_R_OUT, PIE_R_IN, s.start, s.end)}
-                        fill={s.color}
+                        fill={pieSliceFill(s.sliceIndex)}
                         opacity={hoverIdx === null || isHover ? 1 : 0.55}
                         transform={`translate(${dx} ${dy})`}
                         style={{
@@ -404,7 +507,7 @@ export const PieChartSubcategorias: React.FC<IPieChartSubcategoriasProps> = ({
               >
                 <span
                   className="cp-pie-legend-swatch"
-                  style={{ background: s.color }}
+                  style={{ background: pieSliceLegendBg(s.sliceIndex) }}
                   aria-hidden="true"
                 />
                 <span className="cp-pie-legend-text">

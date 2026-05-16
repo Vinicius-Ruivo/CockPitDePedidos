@@ -78,12 +78,6 @@ export class CockpitPedidos
   /** "rawMain\ncaixaConta" (evita reparse quando nada muda). */
   private cachedInputSignature?: string;
 
-  /**
-   * Assinatura dos dois JSON de entrada após o último "Salvar orçamentos" —
-   * alinha o eco do Canvas (evita stale a apagar o cache cedo de mais).
-   */
-  private lastInputSignatureAfterSave?: string;
-
   private lastOrcamentosSaved?: { json: string; at: number; contasOut: string };
 
   // ---------------------------------------------------------------------------
@@ -310,7 +304,6 @@ export class CockpitPedidos
   public destroy(): void {
     this.lastEdited = undefined;
     this.lastOrcamentosSaved = undefined;
-    this.lastInputSignatureAfterSave = undefined;
     this.cachedInputSignature = undefined;
     this.lastHistoricoEmitted = undefined;
     this.selectedRecordId = undefined;
@@ -331,9 +324,10 @@ export class CockpitPedidos
   /** Chamado pelo EditDrawer após o Salvar.
    *  Emite o pedido editado nos outputs para o Canvas fazer o Patch. */
   private handleSavePedido = (recordId: string, fields: IPedidoData): void => {
+    const withCompetencia = applyCompetenciaDefault(fields);
     this.lastEdited = {
       id: recordId,
-      fields: applyInferredSetorForSave(fields),
+      fields: applyInferredSetorForSave(withCompetencia),
       at: Date.now(),
     };
     this.notifyOutputChanged();
@@ -360,10 +354,8 @@ export class CockpitPedidos
     }
 
     this.lastOrcamentosSaved = { json, at: Date.now(), contasOut };
-    // Ainda mantemos a assinatura para retrocompat. Após este save, o Canvas
-    // re-emite `historicoOrcamentoJson` com a nova versão; o anti-stale em
+    // Após este save, o Canvas re-emite `historicoOrcamentoJson`; o anti-stale em
     // `absorverInputs` impede que o eco antigo apague o cache otimista.
-    this.lastInputSignatureAfterSave = `${json}\n${contasOut}`;
     this.cachedInputSignature = undefined; // força reabsorver no próximo updateView
 
     this.markHistoricoChanged({ persistir: false, mes: mesDestino });
@@ -413,6 +405,9 @@ export class CockpitPedidos
         const inferred = findSetorBySubcategoria(p.contaContabil);
         if (inferred) p.setor = inferred;
       }
+      if (!((p.competencia ?? "").trim())) {
+        p.competencia = formatCompetencia(p.dataSolicitacao);
+      }
       pedidos[i] = p;
     }
     return pedidos.filter(Boolean);
@@ -426,6 +421,32 @@ export class CockpitPedidos
 /** Chaves em IPedido (nomes da UI), não nomes Dataverse. */
 const NUMBER_COLUMNS = new Set<keyof IPedidoData>(["valor"]);
 const DATE_COLUMNS = new Set<keyof IPedidoData>(["dataSolicitacao"]);
+const COMPETENCIA_MESES_PT = [
+  "JANEIRO",
+  "FEVEREIRO",
+  "MARCO",
+  "ABRIL",
+  "MAIO",
+  "JUNHO",
+  "JULHO",
+  "AGOSTO",
+  "SETEMBRO",
+  "OUTUBRO",
+  "NOVEMBRO",
+  "DEZEMBRO",
+] as const;
+
+function formatCompetencia(d?: Date): string | undefined {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return undefined;
+  return `${COMPETENCIA_MESES_PT[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+function applyCompetenciaDefault(fields: IPedidoData): IPedidoData {
+  if ((fields.competencia ?? "").trim()) return fields;
+  const auto = formatCompetencia(fields.dataSolicitacao);
+  if (!auto) return fields;
+  return { ...fields, competencia: auto };
+}
 
 /**
  * Quando o Canvas envia histórico com meses antigos mas o **mês corrente**

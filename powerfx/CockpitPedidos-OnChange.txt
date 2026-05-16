@@ -7,6 +7,7 @@ If(
         {
             STATUS:              Text( gEdit.fields.status );
             DATASOLICITACAO:     DateTimeValue( Text( gEdit.fields.dataSolicitacao ) );
+            COMPETENCIA:         Text( gEdit.fields.competencia );
             FORNECEDOR:          Text( gEdit.fields.fornecedor );
             CONTACONTABIL:       Text( gEdit.fields.contaContabil );
             DESPESA:             Text( gEdit.fields.despesa );
@@ -16,9 +17,11 @@ If(
             SETOR:               Text( gEdit.fields.setor );
             CNPJ:                Text( gEdit.fields.cnpj );
             NUMERODECHAMADO:     Text( gEdit.fields.numeroChamado );
+            TEMPOUM:             Text( gEdit.fields.tempoUm );
             VALOR:               Value( gEdit.fields.valor );
             CENTRODECUSTO:       Text( gEdit.fields.centroCusto );
             NUMERODEREQUISICAO:  Text( gEdit.fields.numeroRequisicao );
+            TEMPODOIS:           Text( gEdit.fields.tempoDois );
             ORDEMDECOMPRA:       Text( gEdit.fields.ordemCompra );
             NUMERODANOTA:        Text( gEdit.fields.numeroNota );
             NUMERODOORCAMENTO:   Text( gEdit.fields.numeroOrcamento );
@@ -26,7 +29,35 @@ If(
         }
     );;
     Refresh( PEDIDOS );;
-    UpdateContext({ varAtualizaTela: Now() })
+
+    /* Espelha NUMERODECHAMADO na tabela Notificacao (só esse campo). */
+    If(
+        !IsBlank( Text( gEdit.fields.numeroChamado ) );
+        If(
+            !IsBlank(
+                LookUp(
+                    Notificacao;
+                    NUMERODECHAMADO = Text( gEdit.fields.numeroChamado )
+                )
+            );
+            Patch(
+                Notificacao;
+                LookUp(
+                    Notificacao;
+                    NUMERODECHAMADO = Text( gEdit.fields.numeroChamado )
+                );
+                { NUMERODECHAMADO: Text( gEdit.fields.numeroChamado ) }
+            );
+            Patch(
+                Notificacao;
+                Defaults( Notificacao );
+                { NUMERODECHAMADO: Text( gEdit.fields.numeroChamado ) }
+            )
+        );;
+        Refresh( Notificacao )
+    );;
+
+    Set( varAtualizaTela; Now() )
 );;
 
 If(

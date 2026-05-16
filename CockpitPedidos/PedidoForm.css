@@ -4,10 +4,10 @@
    ============================================================================= */
 
 .cp-root {
-  --bg:             #13091e;
-  --bg-elev-1:      rgba(80, 38, 124, 0.35);
-  --bg-elev-2:      rgba(45, 26, 66, 0.85);
-  --bg-elev-3:      rgba(36, 21, 53, 0.92);
+  --bg:             var(--anim-bg-dark);
+  --bg-elev-1:      rgba(91, 45, 130, 0.32);
+  --bg-elev-2:      rgba(63, 34, 89, 0.88);
+  --bg-elev-3:      rgba(42, 22, 60, 0.94);
   --border:         rgba(255, 255, 255, 0.1);
   --border-strong:  rgba(255, 255, 255, 0.16);
   --divider:        rgba(255, 255, 255, 0.08);
@@ -16,49 +16,53 @@
   --text-muted:     rgba(255, 255, 255, 0.78);
   --text-dim:       rgba(255, 255, 255, 0.52);
 
-  --focus:          #4dd4b8;
-  --focus-ring:     rgba(60, 179, 157, 0.28);
-  --accent:         #3cb39d;
+  --focus:          var(--anim-teal);
+  --focus-ring:     rgba(0, 180, 170, 0.28);
+  --accent:         var(--anim-teal);
 
   --owner-auto:       #c4b5d0;
   --owner-auto-soft:  rgba(196, 181, 208, 0.12);
-  --owner-luciana:    #e8a4c8;
-  --owner-luciana-soft: rgba(232, 164, 200, 0.12);
-  --owner-luciano:    #7dd3f0;
-  --owner-luciano-soft: rgba(125, 211, 240, 0.12);
-  --owner-shared:     #c8e6a0;
-  --owner-shared-soft: rgba(200, 230, 160, 0.12);
+  --owner-luciana:    var(--anim-pink);
+  --owner-luciana-soft: rgba(232, 70, 131, 0.14);
+  --owner-luciano:    var(--anim-blue);
+  --owner-luciano-soft: rgba(66, 180, 228, 0.14);
+  --owner-shared:     var(--anim-green);
+  --owner-shared-soft: rgba(111, 191, 74, 0.14);
 
-  --status-novo-bg:     rgba(165, 180, 252, 0.15);
-  --status-novo-fg:     #c7d2fe;
-  --status-novo-ring:   rgba(165, 180, 252, 0.35);
+  --status-novo-bg:     rgba(66, 180, 228, 0.16);
+  --status-novo-fg:     var(--anim-blue);
+  --status-novo-ring:   rgba(66, 180, 228, 0.35);
 
-  --status-analise-bg:  rgba(251, 191, 36, 0.12);
-  --status-analise-fg:  #fcd34d;
-  --status-analise-ring: rgba(251, 191, 36, 0.28);
+  --status-analise-bg:  rgba(245, 130, 32, 0.14);
+  --status-analise-fg:  var(--anim-orange);
+  --status-analise-ring: rgba(245, 130, 32, 0.3);
 
-  --status-confirmado-bg: rgba(60, 179, 157, 0.18);
-  --status-confirmado-fg: #3cb39d;
-  --status-confirmado-ring: rgba(60, 179, 157, 0.35);
+  --status-confirmado-bg: rgba(0, 180, 170, 0.18);
+  --status-confirmado-fg: var(--anim-teal);
+  --status-confirmado-ring: rgba(0, 180, 170, 0.35);
 
-  --value-accent:   #5ed4be;
+  --value-accent:   var(--anim-blue);
 
-  --radius-sm: 7px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 20px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
 
-  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.15);
-  --shadow-lg:  0 12px 32px rgba(0, 0, 0, 0.22);
+  --shadow-sm:  0 2px 6px rgba(0, 0, 0, 0.16);
+  --shadow-md:  0 10px 24px rgba(0, 0, 0, 0.2);
+  --shadow-lg:  0 18px 44px rgba(0, 0, 0, 0.28);
   --inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
+  --select-option-bg: var(--anim-bg-dark);
+  --select-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%239aa0a6' d='M3 4.5l3 3 3-3z'/></svg>");
+
   box-sizing: border-box;
-  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto,
-    "Helvetica Neue", Arial, sans-serif;
   color: var(--text);
-  background: linear-gradient(180deg, #4b246a 0%, #2d1a42 42%, var(--bg) 100%);
-  padding: 18px;
+  background:
+    radial-gradient(1200px 600px at 10% -20%, rgba(181, 30, 132, 0.22), transparent 55%),
+    radial-gradient(900px 500px at 95% -10%, rgba(0, 180, 170, 0.14), transparent 48%),
+    linear-gradient(180deg, var(--anim-purple) 0%, var(--anim-purple-deep) 48%, var(--bg) 100%);
+  padding: 22px;
   overflow: auto;
   line-height: 1.45;
   font-size: 14px;
@@ -90,54 +94,144 @@
   margin-bottom: 8px;
 }
 
-/* Modo claro — quando o Dashboard aplica .cp-dash-root--light no ancestral */
+/* Tema vibrante (toggle ☀️ no Dashboard) — paleta Ânima */
 .cp-dash-root--light .cp-root {
-  --bg:             #f4f4f5;
-  --bg-elev-1:      #ffffff;
-  --bg-elev-2:      #fafafa;
-  --bg-elev-3:      #f4f4f5;
-  --border:         #e4e4e7;
-  --border-strong:  #d4d4d8;
-  --divider:        #e4e4e7;
+  --bg:             transparent;
+  --bg-elev-1:      rgba(255, 255, 255, 0.12);
+  --bg-elev-2:      rgba(255, 255, 255, 0.16);
+  --bg-elev-3:      rgba(255, 255, 255, 0.22);
+  --border:         rgba(255, 255, 255, 0.14);
+  --border-strong:  rgba(255, 255, 255, 0.24);
+  --divider:        rgba(255, 255, 255, 0.14);
 
-  --text:           #18181b;
-  --text-muted:     #52525b;
-  --text-dim:       #71717a;
+  --text:           #ffffff;
+  --text-muted:     rgba(255, 255, 255, 0.78);
+  --text-dim:       rgba(255, 255, 255, 0.55);
 
-  --focus:          #4f6ae8;
-  --focus-ring:     rgba(79, 106, 232, 0.2);
-  --accent:         #4f6ae8;
+  --focus:          var(--anim-teal);
+  --focus-ring:     rgba(0, 180, 170, 0.28);
+  --accent:         var(--anim-teal);
 
-  --owner-auto:       #6b7280;
-  --owner-auto-soft:  rgba(107, 114, 128, 0.1);
-  --owner-luciana:    #9d4f7a;
-  --owner-luciana-soft: rgba(157, 79, 122, 0.1);
-  --owner-luciano:    #2f6f9f;
-  --owner-luciano-soft: rgba(47, 111, 159, 0.1);
-  --owner-shared:     #6b7a3d;
-  --owner-shared-soft: rgba(107, 122, 61, 0.1);
+  --owner-auto:       #c4b5d0;
+  --owner-luciana:    var(--anim-pink);
+  --owner-luciana-soft: rgba(232, 70, 131, 0.14);
+  --owner-luciano:    var(--anim-blue);
+  --owner-luciano-soft: rgba(66, 180, 228, 0.14);
+  --owner-shared:     var(--anim-green);
+  --owner-shared-soft: rgba(111, 191, 74, 0.14);
 
-  --status-novo-bg:     rgba(37, 99, 235, 0.1);
-  --status-novo-fg:     #2563eb;
-  --status-novo-ring:   rgba(37, 99, 235, 0.25);
+  --status-novo-bg:     rgba(66, 180, 228, 0.16);
+  --status-novo-fg:     var(--anim-blue);
+  --status-novo-ring:   rgba(66, 180, 228, 0.35);
 
-  --status-analise-bg:  rgba(180, 83, 9, 0.1);
-  --status-analise-fg:  #b45309;
-  --status-analise-ring: rgba(180, 83, 9, 0.25);
+  --status-analise-bg:  rgba(245, 130, 32, 0.14);
+  --status-analise-fg:  var(--anim-orange);
+  --status-analise-ring: rgba(245, 130, 32, 0.3);
 
-  --status-confirmado-bg: rgba(21, 128, 61, 0.1);
-  --status-confirmado-fg: #15803d;
-  --status-confirmado-ring: rgba(21, 128, 61, 0.25);
+  --status-confirmado-bg: rgba(0, 180, 170, 0.18);
+  --status-confirmado-fg: var(--anim-teal);
+  --status-confirmado-ring: rgba(0, 180, 170, 0.35);
 
-  --value-accent:   #1e40af;
+  --value-accent:   var(--anim-blue);
 
-  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg:  0 10px 28px rgba(0, 0, 0, 0.08);
-  --inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.14);
+  --shadow-lg:  0 10px 28px rgba(0, 0, 0, 0.18);
+  --inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  --select-option-bg: var(--anim-purple-deep);
+  --select-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%23ffffff' fill-opacity='0.65' d='M3 4.5l3 3 3-3z'/></svg>");
 
   color: var(--text);
-  background: linear-gradient(90deg, #5e238c 0%, #a41b80 100%);
+  background: transparent;
+}
+
+.cp-dash-root--light .cp-root.cp-root-embedded {
+  background: transparent;
+}
+
+.cp-dash-root--light .cp-root-embedded .cp-drawer-footer {
+  border-top: 1px solid var(--divider);
+  padding: 12px 0 6px;
+  margin-top: 10px;
+  background: transparent;
+}
+
+.cp-dash-root--light .cp-root-embedded .cp-btn-ghost {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.cp-dash-root--light .cp-root-embedded .cp-btn-ghost:hover {
+  background: var(--bg-elev-3);
+  color: var(--text);
+}
+
+/* Inputs de texto no modo claro — :not(select) evita repetir a seta do dropdown */
+.cp-dash-root--light .cp-root .cp-input:not(select) {
+  background-color: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #18181b;
+}
+
+.cp-dash-root--light .cp-root .cp-input:not(select):hover {
+  background-color: #fafafa;
+  border-color: #d4d4d8;
+}
+
+.cp-dash-root--light .cp-root .cp-input:not(select):focus {
+  background-color: #ffffff;
+  border-color: rgba(0, 180, 170, 0.55);
+  box-shadow: 0 0 0 2px var(--focus-ring), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.cp-dash-root--light .cp-root .cp-input[readonly]:not(select) {
+  background-color: #f4f4f5;
+}
+
+.cp-dash-root--light .cp-root select.cp-input,
+.cp-dash-root--light .cp-root .cp-select {
+  color-scheme: light;
+  color: #18181b;
+  border-color: rgba(255, 255, 255, 0.35);
+  background-color: rgba(255, 255, 255, 0.96);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 12px;
+}
+
+.cp-dash-root--light .cp-root select.cp-input:hover,
+.cp-dash-root--light .cp-root .cp-select:hover,
+.cp-dash-root--light .cp-root select.cp-input:focus,
+.cp-dash-root--light .cp-root .cp-select:focus {
+  border-color: #d4d4d8;
+  background-color: #fafafa;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 12px;
+  box-shadow: none;
+}
+
+.cp-dash-root--light .cp-root select.cp-input:focus,
+.cp-dash-root--light .cp-root .cp-select:focus {
+  border-color: rgba(79, 106, 232, 0.55);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--focus-ring), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.cp-dash-root--light .cp-root select.cp-input optgroup,
+.cp-dash-root--light .cp-root select.cp-input option,
+.cp-dash-root--light .cp-root .cp-status-select option {
+  background: var(--select-option-bg);
+  color: #18181b;
+}
+
+.cp-dash-root--light .cp-root .cp-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.65;
 }
 
 .cp-dash-root--light .cp-root::-webkit-scrollbar-thumb {
@@ -156,7 +250,10 @@
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-.cp-root::-webkit-scrollbar-thumb:hover { background: #384264; background-clip: padding-box; }
+.cp-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(91, 45, 130, 0.55);
+  background-clip: padding-box;
+}
 
 /* ---------------------------------------------------------------------------
    HEADER (barra superior: título + mini-métricas do pedido)
@@ -250,17 +347,24 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 20px 24px;
-  background: var(--bg-elev-1);
+  padding: 22px 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    var(--bg-elev-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--inner-glow);
-  margin-bottom: 18px;
+  box-shadow: var(--inner-glow), var(--shadow-sm);
+  margin-bottom: 20px;
   overflow: hidden;
 }
 
 .cp-summary::before {
-  display: none;
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent), rgba(77, 212, 184, 0.25));
+  opacity: 0.95;
 }
 
 .cp-summary-left {
@@ -424,14 +528,17 @@
    --------------------------------------------------------------------------- */
 
 .cp-section {
-  background: var(--bg-elev-1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.005)),
+    var(--bg-elev-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 18px 20px 20px;
-  box-shadow: var(--inner-glow);
-  margin-bottom: 16px;
+  padding: 20px 22px 22px;
+  box-shadow: var(--inner-glow), var(--shadow-sm);
+  margin-bottom: 18px;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(4px);
 }
 
 .cp-section::before {
@@ -440,7 +547,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: var(--owner-auto);
   opacity: 0.85;
 }
@@ -449,7 +556,7 @@
 .cp-section-shared::before  { background: var(--owner-shared); }
 
 .cp-section-head {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--divider);
   display: flex;
@@ -458,7 +565,7 @@
 }
 
 .cp-section-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   margin: 0;
   display: flex;
@@ -482,7 +589,7 @@
 
 .cp-section-desc {
   margin: 0;
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-muted);
   padding-left: 38px;
 }
@@ -493,8 +600,8 @@
 
 .cp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 18px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -505,13 +612,15 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px;
-  background: var(--bg-elev-2);
+  padding: 13px 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    var(--bg-elev-2);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--owner-auto);
+  border-left: 2px solid var(--owner-auto);
   border-radius: var(--radius-md);
   transition: border-color 0.15s ease, box-shadow 0.15s ease,
-    background-color 0.15s ease;
+    background-color 0.15s ease, transform 0.15s ease;
 }
 
 .cp-field-auto    { border-left-color: var(--owner-auto);    background: var(--bg-elev-2); }
@@ -521,7 +630,13 @@
 
 .cp-field:focus-within {
   border-color: rgba(91, 124, 250, 0.45);
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--focus-ring), var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.cp-field:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .cp-field-header {
@@ -532,7 +647,7 @@
 }
 
 .cp-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.04em;
@@ -598,7 +713,7 @@
   font-size: 13.5px;
   font-family: inherit;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   outline: none;
@@ -610,15 +725,126 @@
   color: var(--text-dim);
 }
 
-.cp-input:hover {
-  border-color: #4b4e56;
-  background: rgba(255, 255, 255, 0.03);
+.cp-input:not(select):hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background-color: rgba(255, 255, 255, 0.045);
 }
 
-.cp-input:focus {
+.cp-input:not(select):focus {
   border-color: rgba(91, 124, 250, 0.5);
-  box-shadow: 0 0 0 2px var(--focus-ring);
-  background: rgba(91, 124, 250, 0.04);
+  box-shadow: 0 0 0 2px var(--focus-ring), 0 6px 18px rgba(0, 0, 0, 0.16);
+  background-color: rgba(91, 124, 250, 0.04);
+}
+
+select.cp-input:hover,
+.cp-select:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background-color: rgba(255, 255, 255, 0.045);
+}
+
+select.cp-input:focus,
+.cp-select:focus {
+  border-color: rgba(91, 124, 250, 0.5);
+  box-shadow: 0 0 0 2px var(--focus-ring), 0 6px 18px rgba(0, 0, 0, 0.16);
+  background-color: rgba(91, 124, 250, 0.04);
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 12px;
+}
+
+.cp-input[readonly] {
+  cursor: default;
+  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* Footer do drawer mais elegante e fixo no contexto */
+.cp-drawer-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(24, 14, 35, 0.96), rgba(20, 12, 30, 0.96));
+  box-shadow: var(--shadow-md);
+  margin-top: 10px;
+  backdrop-filter: blur(6px);
+}
+
+/* No drawer embutido, evita "tarja" escura no rodapé. */
+.cp-root-embedded .cp-drawer-footer {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 2px 2px;
+  margin-top: 6px;
+  border: none;
+  border-top: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.cp-drawer-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cp-btn {
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cp-btn:hover {
+  transform: translateY(-1px);
+}
+
+.cp-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.cp-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.cp-btn-primary {
+  border-color: rgba(0, 180, 170, 0.55);
+  background: linear-gradient(180deg, var(--anim-teal), #009a92);
+  color: #08140f;
+  font-weight: var(--cp-font-weight-medium);
+}
+
+.cp-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.cp-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cp-autosave-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Inputs de data / calendar picker — invertemos o ícone para ficar visível no dark */
@@ -650,19 +876,20 @@ select.cp-input,
   -webkit-appearance: none;
   -moz-appearance: none;
   padding-right: 32px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%239aa0a6' d='M3 4.5l3 3 3-3z'/></svg>");
+  background-image: var(--select-chevron);
   background-repeat: no-repeat;
   background-position: right 10px center;
+  background-size: 12px 12px;
   cursor: pointer;
 }
 select.cp-input optgroup {
   color: var(--text);
-  background: #1d1f24;
+  background: var(--select-option-bg);
   font-weight: 600;
 }
 select.cp-input option {
   color: var(--text);
-  background: #1d1f24;
+  background: var(--select-option-bg);
   font-weight: 400;
 }
 

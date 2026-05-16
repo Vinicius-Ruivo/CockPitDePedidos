@@ -17,7 +17,6 @@
     "deploy:watch": "nodemon --watch CockpitPedidos --ext ts,tsx,css,xml,resx --delay 2500 --exec npm run deploy"
   },
   "dependencies": {
-    "@fluentui/react": "^8.110.7",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
     "xlsx": "^0.18.5"
